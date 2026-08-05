@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  hackossem:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_ENV: development
+      FLASK_DEBUG: 1
+      VULNLAB_API_KEY: ${VULNLAB_API_KEY:-}
+    volumes:
+      - .:/app
+    container_name: hackossem-app
+    restart: unless-stopped
+    networks:
+      - hackossem-net
+
+networks:
+  hackossem-net:
+    driver: bridge
