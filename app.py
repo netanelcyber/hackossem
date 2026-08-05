@@ -264,7 +264,7 @@ def api_query_wasm():
 # ==========================================
 # 5) HTML Templates for UI
 # ==========================================
-VULNLAB_HTML = """
+VULNLAB_HTML = """{% raw %}
 <!DOCTYPE html>
 <html ng-app="VulnLabApp" dir="ltr" lang="en">
 <head>
@@ -571,6 +571,7 @@ VULNLAB_HTML = """
   </script>
 </body>
 </html>
+{% endraw %}
 """
 
 # ==========================================
