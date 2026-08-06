@@ -1,0 +1,79 @@
+# -*- mode: ruby -*-
+# VulnLab AD Labs - כל מעבדה ב-VM נפרד
+# Master Vagrantfile for multiple lab VMs
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+
+  # Lab 1: Active Directory Basics
+  config.vm.define "ad-lab-1" do |lab1|
+    lab1.vm.hostname = "ad-lab-1"
+    lab1.vm.network "private_network", ip: "192.168.56.11"
+    lab1.vm.network "forwarded_port", guest: 5000, host: 5001
+    lab1.vm.provider "virtualbox" do |vb|
+      vb.name = "VulnLab-AD-Lab-1"
+      vb.memory = 2048
+      vb.cpus = 2
+    end
+  end
+
+  # Lab 2: LDAP Enumeration
+  config.vm.define "ad-lab-2" do |lab2|
+    lab2.vm.hostname = "ad-lab-2"
+    lab2.vm.network "private_network", ip: "192.168.56.12"
+    lab2.vm.network "forwarded_port", guest: 5000, host: 5002
+    lab2.vm.provider "virtualbox" do |vb|
+      vb.name = "VulnLab-AD-Lab-2"
+      vb.memory = 2048
+      vb.cpus = 2
+    end
+  end
+
+  # Lab 3: Kerberos
+  config.vm.define "ad-lab-3" do |lab3|
+    lab3.vm.hostname = "ad-lab-3"
+    lab3.vm.network "private_network", ip: "192.168.56.13"
+    lab3.vm.network "forwarded_port", guest: 5000, host: 5003
+    lab3.vm.provider "virtualbox" do |vb|
+      vb.name = "VulnLab-AD-Lab-3"
+      vb.memory = 2048
+      vb.cpus = 2
+    end
+  end
+
+  # Lab 4: Privilege Escalation
+  config.vm.define "ad-lab-4" do |lab4|
+    lab4.vm.hostname = "ad-lab-4"
+    lab4.vm.network "private_network", ip: "192.168.56.14"
+    lab4.vm.network "forwarded_port", guest: 5000, host: 5004
+    lab4.vm.provider "virtualbox" do |vb|
+      vb.name = "VulnLab-AD-Lab-4"
+      vb.memory = 2048
+      vb.cpus = 2
+    end
+  end
+
+  # Lab 5: Golden Ticket
+  config.vm.define "ad-lab-5" do |lab5|
+    lab5.vm.hostname = "ad-lab-5"
+    lab5.vm.network "private_network", ip: "192.168.56.15"
+    lab5.vm.network "forwarded_port", guest: 5000, host: 5005
+    lab5.vm.provider "virtualbox" do |vb|
+      vb.name = "VulnLab-AD-Lab-5"
+      vb.memory = 2048
+      vb.cpus = 2
+    end
+  end
+
+  # Provisioning for all labs
+  config.vm.provision "shell", inline: <<-SHELL
+    set -e
+    apt-get update
+    apt-get install -y python3 python3-pip python3-venv git curl
+    cd /home/vagrant/hackossem
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install --upgrade pip
+    pip install -r requirements.txt
+  SHELL
+end
