@@ -1,0 +1,148 @@
+{
+  "vulnerabilities": [
+    {
+      "type": "weak-password-policy",
+      "category": "Credential Theft",
+      "difficulty": "Easy",
+      "description": "Weak password policy enables credential spray attacks",
+      "configuration": {
+        "minPasswordLength": 4,
+        "passwordExpirationDays": 999,
+        "lockoutThreshold": 0
+      }
+    },
+    {
+      "type": "service-account-credentials",
+      "category": "Privilege Escalation",
+      "difficulty": "Easy",
+      "description": "Service account credentials stored in plaintext or LAPS",
+      "configuration": {}
+    },
+    {
+      "type": "unpatched-system",
+      "category": "CVE Exploitation",
+      "difficulty": "Easy",
+      "description": "System missing critical security patches",
+      "configuration": {}
+    },
+    {
+      "type": "basic-auth-http",
+      "category": "Credential Capture",
+      "difficulty": "Easy",
+      "description": "IIS basic authentication over HTTP",
+      "configuration": {}
+    },
+    {
+      "type": "misconfigured-shares",
+      "category": "Misconfiguration",
+      "difficulty": "Easy",
+      "description": "File shares with oversharing",
+      "configuration": {}
+    },
+    {
+      "type": "uac-bypass",
+      "category": "Privilege Escalation",
+      "difficulty": "Easy",
+      "description": "UAC bypass and registry credential access",
+      "configuration": {}
+    },
+    {
+      "type": "sql-injection",
+      "category": "Web App Vulnerability",
+      "difficulty": "Medium",
+      "description": "ASP.NET SQL injection vulnerability",
+      "configuration": {}
+    },
+    {
+      "type": "ad-delegation-abuse",
+      "category": "AD Misconfiguration",
+      "difficulty": "Medium",
+      "description": "Constrained delegation misconfiguration",
+      "configuration": {}
+    },
+    {
+      "type": "kerberoasting",
+      "category": "Kerberos Attack",
+      "difficulty": "Medium",
+      "description": "Service principals vulnerable to Kerberoasting",
+      "configuration": {}
+    },
+    {
+      "type": "directory-traversal",
+      "category": "Web App Vulnerability",
+      "difficulty": "Medium",
+      "description": "Path traversal and file upload vulnerabilities",
+      "configuration": {}
+    },
+    {
+      "type": "gpo-misconfiguration",
+      "category": "AD Misconfiguration",
+      "difficulty": "Medium",
+      "description": "Group Policy leading to privilege escalation",
+      "configuration": {}
+    },
+    {
+      "type": "ldap-injection",
+      "category": "Web App Vulnerability",
+      "difficulty": "Medium",
+      "description": "LDAP injection in custom application",
+      "configuration": {}
+    },
+    {
+      "type": "token-impersonation",
+      "category": "Privilege Escalation",
+      "difficulty": "Medium",
+      "description": "Token theft and impersonation",
+      "configuration": {}
+    },
+    {
+      "type": "multi-stage-privesc",
+      "category": "Privilege Escalation",
+      "difficulty": "Hard",
+      "description": "Chained kernel and service exploits",
+      "configuration": {}
+    },
+    {
+      "type": "ntlm-relay",
+      "category": "Network Attack",
+      "difficulty": "Hard",
+      "description": "NTLM relay attack",
+      "configuration": {}
+    },
+    {
+      "type": "ad-acl-abuse",
+      "category": "AD Misconfiguration",
+      "difficulty": "Hard",
+      "description": "Active Directory ACL misconfigurations",
+      "configuration": {}
+    },
+    {
+      "type": "webdav-rce",
+      "category": "Web App Vulnerability",
+      "difficulty": "Hard",
+      "description": "WebDAV PUT method for RCE",
+      "configuration": {}
+    },
+    {
+      "type": "dll-injection",
+      "category": "Privilege Escalation",
+      "difficulty": "Hard",
+      "description": "DLL injection and COM exploitation",
+      "configuration": {}
+    },
+    {
+      "type": "kerberos-s4u",
+      "category": "Kerberos Attack",
+      "difficulty": "Hard",
+      "description": "Service-for-user-to-self abuse",
+      "configuration": {}
+    },
+    {
+      "type": "persistence",
+      "category": "Persistence",
+      "difficulty": "Hard",
+      "description": "Multiple persistence mechanisms",
+      "configuration": {}
+    }
+  ]
+}

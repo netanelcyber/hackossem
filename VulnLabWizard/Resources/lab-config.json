@@ -1,0 +1,224 @@
+{
+  "labs": [
+    {
+      "id": "AD-WS-Easy-1",
+      "name": "Weak Password Policy",
+      "difficulty": "Easy",
+      "vmName": "VulnLab-ad-lab-1",
+      "ipAddress": "192.168.56.100",
+      "rdpPort": 5100,
+      "winrmPort": 2100,
+      "vulnerabilityType": "Credential Theft",
+      "description": "Windows Server with weak password policy enabling credential spray attacks"
+    },
+    {
+      "id": "AD-WS-Easy-2",
+      "name": "Default Service Accounts",
+      "difficulty": "Easy",
+      "vmName": "VulnLab-ad-lab-2",
+      "ipAddress": "192.168.56.101",
+      "rdpPort": 5101,
+      "winrmPort": 2101,
+      "vulnerabilityType": "Privilege Escalation",
+      "description": "Service accounts with high privileges and accessible credentials"
+    },
+    {
+      "id": "AD-WS-Easy-3",
+      "name": "Unpatched System",
+      "difficulty": "Easy",
+      "vmName": "VulnLab-ad-lab-3",
+      "ipAddress": "192.168.56.102",
+      "rdpPort": 5102,
+      "winrmPort": 2102,
+      "vulnerabilityType": "CVE Exploitation",
+      "description": "System with known public kernel vulnerabilities"
+    },
+    {
+      "id": "AD-WS-Easy-4",
+      "name": "IIS Basic Auth",
+      "difficulty": "Easy",
+      "vmName": "VulnLab-ad-lab-4",
+      "ipAddress": "192.168.56.103",
+      "rdpPort": 5103,
+      "winrmPort": 2103,
+      "vulnerabilityType": "Credential Capture",
+      "description": "IIS with basic auth over HTTP allowing credential capture"
+    },
+    {
+      "id": "AD-WS-Easy-5",
+      "name": "Misconfigured Shares",
+      "difficulty": "Easy",
+      "vmName": "VulnLab-ad-lab-5",
+      "ipAddress": "192.168.56.104",
+      "rdpPort": 5104,
+      "winrmPort": 2104,
+      "vulnerabilityType": "Misconfiguration",
+      "description": "File shares with oversharing allowing unauthorized access"
+    },
+    {
+      "id": "AD-WS-Easy-6",
+      "name": "UAC Bypass",
+      "difficulty": "Easy",
+      "vmName": "VulnLab-ad-lab-6",
+      "ipAddress": "192.168.56.105",
+      "rdpPort": 5105,
+      "winrmPort": 2105,
+      "vulnerabilityType": "Privilege Escalation",
+      "description": "UAC bypass techniques and registry credential extraction"
+    },
+    {
+      "id": "AD-WS-Medium-1",
+      "name": "SQL Injection",
+      "difficulty": "Medium",
+      "vmName": "VulnLab-ad-lab-7",
+      "ipAddress": "192.168.56.106",
+      "rdpPort": 5106,
+      "winrmPort": 2106,
+      "vulnerabilityType": "Web App Vulnerability",
+      "description": "ASP.NET application with SQL injection vulnerability"
+    },
+    {
+      "id": "AD-WS-Medium-2",
+      "name": "AD Delegation Abuse",
+      "difficulty": "Medium",
+      "vmName": "VulnLab-ad-lab-8",
+      "ipAddress": "192.168.56.107",
+      "rdpPort": 5107,
+      "winrmPort": 2107,
+      "vulnerabilityType": "AD Misconfiguration",
+      "description": "Constrained delegation misconfiguration enabling S4U attacks"
+    },
+    {
+      "id": "AD-WS-Medium-3",
+      "name": "Kerberoasting",
+      "difficulty": "Medium",
+      "vmName": "VulnLab-ad-lab-9",
+      "ipAddress": "192.168.56.108",
+      "rdpPort": 5108,
+      "winrmPort": 2108,
+      "vulnerabilityType": "Kerberos Attack",
+      "description": "Service principal names vulnerable to Kerberoasting attack"
+    },
+    {
+      "id": "AD-WS-Medium-4",
+      "name": "Directory Traversal",
+      "difficulty": "Medium",
+      "vmName": "VulnLab-ad-lab-10",
+      "ipAddress": "192.168.56.109",
+      "rdpPort": 5109,
+      "winrmPort": 2109,
+      "vulnerabilityType": "Web App Vulnerability",
+      "description": "IIS with path traversal and file upload vulnerabilities"
+    },
+    {
+      "id": "AD-WS-Medium-5",
+      "name": "GPO Misconfiguration",
+      "difficulty": "Medium",
+      "vmName": "VulnLab-ad-lab-11",
+      "ipAddress": "192.168.56.110",
+      "rdpPort": 5110,
+      "winrmPort": 2110,
+      "vulnerabilityType": "AD Misconfiguration",
+      "description": "Group Policy misconfigurations leading to privilege escalation"
+    },
+    {
+      "id": "AD-WS-Medium-6",
+      "name": "LDAP Injection",
+      "difficulty": "Medium",
+      "vmName": "VulnLab-ad-lab-12",
+      "ipAddress": "192.168.56.111",
+      "rdpPort": 5111,
+      "winrmPort": 2111,
+      "vulnerabilityType": "Web App Vulnerability",
+      "description": "LDAP injection in custom IIS application"
+    },
+    {
+      "id": "AD-WS-Medium-7",
+      "name": "Token Impersonation",
+      "difficulty": "Medium",
+      "vmName": "VulnLab-ad-lab-13",
+      "ipAddress": "192.168.56.112",
+      "rdpPort": 5112,
+      "winrmPort": 2112,
+      "vulnerabilityType": "Privilege Escalation",
+      "description": "Token theft and impersonation enabling privilege escalation"
+    },
+    {
+      "id": "AD-WS-Hard-1",
+      "name": "Multi-Stage PrivEsc",
+      "difficulty": "Hard",
+      "vmName": "VulnLab-ad-lab-14",
+      "ipAddress": "192.168.56.113",
+      "rdpPort": 5113,
+      "winrmPort": 2113,
+      "vulnerabilityType": "Privilege Escalation",
+      "description": "Kernel vulnerability chained with service misconfiguration"
+    },
+    {
+      "id": "AD-WS-Hard-2",
+      "name": "NTLM Relay",
+      "difficulty": "Hard",
+      "vmName": "VulnLab-ad-lab-15",
+      "ipAddress": "192.168.56.114",
+      "rdpPort": 5114,
+      "winrmPort": 2114,
+      "vulnerabilityType": "Network Attack",
+      "description": "NTLM relay with SMB signing disabled"
+    },
+    {
+      "id": "AD-WS-Hard-3",
+      "name": "AD ACL Abuse",
+      "difficulty": "Hard",
+      "vmName": "VulnLab-ad-lab-16",
+      "ipAddress": "192.168.56.115",
+      "rdpPort": 5115,
+      "winrmPort": 2115,
+      "vulnerabilityType": "AD Misconfiguration",
+      "description": "Active Directory ACL misconfigurations allowing privilege escalation"
+    },
+    {
+      "id": "AD-WS-Hard-4",
+      "name": "WebDAV RCE",
+      "difficulty": "Hard",
+      "vmName": "VulnLab-ad-lab-17",
+      "ipAddress": "192.168.56.116",
+      "rdpPort": 5116,
+      "winrmPort": 2116,
+      "vulnerabilityType": "Web App Vulnerability",
+      "description": "WebDAV PUT method exploitation for remote code execution"
+    },
+    {
+      "id": "AD-WS-Hard-5",
+      "name": "DLL Injection",
+      "difficulty": "Hard",
+      "vmName": "VulnLab-ad-lab-18",
+      "ipAddress": "192.168.56.117",
+      "rdpPort": 5117,
+      "winrmPort": 2117,
+      "vulnerabilityType": "Privilege Escalation",
+      "description": "DLL injection and COM elevation of privilege"
+    },
+    {
+      "id": "AD-WS-Hard-6",
+      "name": "Kerberos S4U",
+      "difficulty": "Hard",
+      "vmName": "VulnLab-ad-lab-19",
+      "ipAddress": "192.168.56.118",
+      "rdpPort": 5118,
+      "winrmPort": 2118,
+      "vulnerabilityType": "Kerberos Attack",
+      "description": "Service-for-user-to-self (S4U) Kerberos abuse"
+    },
+    {
+      "id": "AD-WS-Hard-7",
+      "name": "Persistence",
+      "difficulty": "Hard",
+      "vmName": "VulnLab-ad-lab-20",
+      "ipAddress": "192.168.56.119",
+      "rdpPort": 5119,
+      "winrmPort": 2119,
+      "vulnerabilityType": "Persistence",
+      "description": "Multi-stage payload with persistence mechanisms"
+    }
+  ]
+}
