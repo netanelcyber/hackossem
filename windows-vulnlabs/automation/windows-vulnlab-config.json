@@ -1,0 +1,266 @@
+{
+  "platform": "Windows Server 2022 Vulnerability Labs",
+  "description": "20 penetration testing training labs with Active Directory and intentional vulnerabilities",
+  "easy_tier": [
+    {
+      "id": 1,
+      "name": "AD-WS-Easy-1",
+      "difficulty": "Easy",
+      "port": 2100,
+      "rdp_port": 5100,
+      "ip": "192.168.56.100",
+      "vulnerability": "Weak password policy (credential theft)",
+      "description": "Weak AD password policy allows credential brute force attacks. Min 4 chars, 999-day expiration.",
+      "tags": ["credential-theft", "ad", "weak-passwords"],
+      "exploitation": "Enumerate users via LDAP, perform password spraying or dictionary attacks"
+    },
+    {
+      "id": 2,
+      "name": "AD-WS-Easy-2",
+      "difficulty": "Easy",
+      "port": 2101,
+      "rdp_port": 5101,
+      "ip": "192.168.56.101",
+      "vulnerability": "Default service accounts with high privileges",
+      "description": "Service accounts with known/weak passwords running with SYSTEM privileges",
+      "tags": ["privilege-escalation", "service-accounts", "weak-credentials"],
+      "exploitation": "Identify service running as service account, exploit with captured credentials"
+    },
+    {
+      "id": 3,
+      "name": "AD-WS-Easy-3",
+      "difficulty": "Easy",
+      "port": 2102,
+      "rdp_port": 5102,
+      "ip": "192.168.56.102",
+      "vulnerability": "Unpatched system with known public exploits",
+      "description": "Windows Server 2022 with known CVE (e.g., PrintSpooler, SMBv3)",
+      "tags": ["cve", "unpatched", "privilege-escalation"],
+      "exploitation": "Use public exploit (e.g., CVE-2021-1732) to gain SYSTEM privileges"
+    },
+    {
+      "id": 4,
+      "name": "AD-WS-Easy-4",
+      "difficulty": "Easy",
+      "port": 2103,
+      "rdp_port": 5103,
+      "ip": "192.168.56.103",
+      "vulnerability": "IIS basic auth over HTTP (credential capture)",
+      "description": "IIS with basic authentication over unencrypted HTTP. Credentials in Base64.",
+      "tags": ["iis", "web", "credential-capture", "basic-auth"],
+      "exploitation": "Capture HTTP traffic via MITM, Base64 decode credentials"
+    },
+    {
+      "id": 5,
+      "name": "AD-WS-Easy-5",
+      "difficulty": "Easy",
+      "port": 2104,
+      "rdp_port": 5104,
+      "ip": "192.168.56.104",
+      "vulnerability": "Misconfigured file shares with oversharing",
+      "description": "SMB shares with overly permissive access (Everyone:Read, Users:Modify on sensitive shares)",
+      "tags": ["smb", "shares", "misconfiguration", "information-disclosure"],
+      "exploitation": "Enumerate shares with net view, access confidential files, find credentials"
+    },
+    {
+      "id": 6,
+      "name": "AD-WS-Easy-6",
+      "difficulty": "Easy",
+      "port": 2105,
+      "rdp_port": 5105,
+      "ip": "192.168.56.105",
+      "vulnerability": "Simple privilege escalation (RunAs, UAC bypass)",
+      "description": "User stored RunAs credentials, UAC not properly configured, registry-readable LAPS password",
+      "tags": ["privilege-escalation", "uac-bypass", "credential-storage"],
+      "exploitation": "Extract RunAs credentials from process memory or registry, bypass UAC via trusted binary"
+    }
+  ],
+  "medium_tier": [
+    {
+      "id": 7,
+      "name": "AD-WS-Medium-1",
+      "difficulty": "Medium",
+      "port": 2106,
+      "rdp_port": 5106,
+      "ip": "192.168.56.106",
+      "vulnerability": "ASP.NET SQL injection in IIS webapp",
+      "description": "Custom ASP.NET login form vulnerable to SQL injection. Time-based blind SQLi exploitable.",
+      "tags": ["web", "sql-injection", "iis", "aspnet"],
+      "exploitation": "Perform SQL injection to extract users/passwords, use second-order injection for RCE"
+    },
+    {
+      "id": 8,
+      "name": "AD-WS-Medium-2",
+      "difficulty": "Medium",
+      "port": 2107,
+      "rdp_port": 5107,
+      "ip": "192.168.56.107",
+      "vulnerability": "AD delegation abuse (constrained delegation)",
+      "description": "Service account configured with constrained delegation to sensitive service. Allows S4U2Self + S4U2Proxy",
+      "tags": ["ad", "delegation", "kerberos", "privilege-escalation"],
+      "exploitation": "Capture service ticket, use S4U2Self, perform constrained delegation to escalate"
+    },
+    {
+      "id": 9,
+      "name": "AD-WS-Medium-3",
+      "difficulty": "Medium",
+      "port": 2108,
+      "rdp_port": 5108,
+      "ip": "192.168.56.108",
+      "vulnerability": "Kerberoasting attack surface",
+      "description": "Service accounts with SPNs set and weak passwords. AS-REP roasting not prevented.",
+      "tags": ["kerberos", "kerberoasting", "as-rep-roast", "ad"],
+      "exploitation": "Request service tickets, crack offline via Hashcat. OR request AS-REP ticket for user without preauth"
+    },
+    {
+      "id": 10,
+      "name": "AD-WS-Medium-4",
+      "difficulty": "Medium",
+      "port": 2109,
+      "rdp_port": 5109,
+      "ip": "192.168.56.109",
+      "vulnerability": "IIS directory traversal + web shell upload",
+      "description": "IIS directory traversal vulnerability in file viewer + unsafe file upload in separate app",
+      "tags": ["web", "directory-traversal", "file-upload", "iis"],
+      "exploitation": "Use path traversal to read system files, upload web shell via second app, execute commands"
+    },
+    {
+      "id": 11,
+      "name": "AD-WS-Medium-5",
+      "difficulty": "Medium",
+      "port": 2110,
+      "rdp_port": 5110,
+      "ip": "192.168.56.110",
+      "vulnerability": "GPO misconfiguration leading to PrivEsc",
+      "description": "Group Policy allows users to run elevated tasks (e.g., scheduled task). RunAs credentials cached.",
+      "tags": ["gpo", "group-policy", "privilege-escalation"],
+      "exploitation": "Identify writable task or registry via GPO, modify to run malicious command as SYSTEM"
+    },
+    {
+      "id": 12,
+      "name": "AD-WS-Medium-6",
+      "difficulty": "Medium",
+      "port": 2111,
+      "rdp_port": 5111,
+      "ip": "192.168.56.111",
+      "vulnerability": "LDAP injection in custom IIS application",
+      "description": "IIS application takes user input and builds LDAP queries without sanitization",
+      "tags": ["web", "ldap-injection", "iis", "information-disclosure"],
+      "exploitation": "Perform LDAP injection to enumerate users, modify filter to extract credential hashes"
+    },
+    {
+      "id": 13,
+      "name": "AD-WS-Medium-7",
+      "difficulty": "Medium",
+      "port": 2112,
+      "rdp_port": 5112,
+      "ip": "192.168.56.112",
+      "vulnerability": "Token impersonation / token theft",
+      "description": "Application runs as elevated user and can be exploited for token theft. Impersonation privileges enabled.",
+      "tags": ["privilege-escalation", "token-impersonation", "windows"],
+      "exploitation": "Exploit vulnerable process to steal SYSTEM token, spawn shell with elevated privileges"
+    }
+  ],
+  "hard_tier": [
+    {
+      "id": 14,
+      "name": "AD-WS-Hard-1",
+      "difficulty": "Hard",
+      "port": 2113,
+      "rdp_port": 5113,
+      "ip": "192.168.56.113",
+      "vulnerability": "Multi-step PrivEsc chain (kernel + service)",
+      "description": "Kernel vulnerability (CVE-2019-1132 or similar) combined with service misconfiguration",
+      "tags": ["cve", "kernel", "privilege-escalation", "chained-exploit"],
+      "exploitation": "Exploit kernel vuln for initial high priv, then pivot via service misconfig to SYSTEM"
+    },
+    {
+      "id": 15,
+      "name": "AD-WS-Hard-2",
+      "difficulty": "Hard",
+      "port": 2114,
+      "rdp_port": 5114,
+      "ip": "192.168.56.114",
+      "vulnerability": "NTLM relay + SMB signing disabled",
+      "description": "SMB signing disabled on network, NTLM v1 in use, relay attack possible to sensitive services",
+      "tags": ["ntlm-relay", "smb", "network-attacks", "privilege-escalation"],
+      "exploitation": "Perform NTLM relay via HTTP->LDAP or HTTP->SMB to escalate via LDAP or modify files via SMB"
+    },
+    {
+      "id": 16,
+      "name": "AD-WS-Hard-3",
+      "difficulty": "Hard",
+      "port": 2115,
+      "rdp_port": 5115,
+      "ip": "192.168.56.115",
+      "vulnerability": "AD ACL misconfigurations (WriteProperty, GenericAll)",
+      "description": "AD objects with misconfigured ACLs (e.g., user can WriteProperty on admin account userAccountControl)",
+      "tags": ["ad-acl", "ad", "privilege-escalation", "ad-abuse"],
+      "exploitation": "Use BloodHound to find ACL path, exploit WriteProperty to set userAccountControl flags for privilege escalation"
+    },
+    {
+      "id": 17,
+      "name": "AD-WS-Hard-4",
+      "difficulty": "Hard",
+      "port": 2116,
+      "rdp_port": 5116,
+      "ip": "192.168.56.116",
+      "vulnerability": "IIS WebDAV + HTTP PUT method exploitation",
+      "description": "IIS with WebDAV enabled, HTTP PUT allowed, directories writable, no input validation",
+      "tags": ["webdav", "iis", "rce", "web"],
+      "exploitation": "Use WebDAV PUT to upload malicious .aspx file, execute arbitrary code as IIS application pool identity"
+    },
+    {
+      "id": 18,
+      "name": "AD-WS-Hard-5",
+      "difficulty": "Hard",
+      "port": 2117,
+      "rdp_port": 5117,
+      "ip": "192.168.56.117",
+      "vulnerability": "DLL injection + COM elevation of privilege",
+      "description": "Writable directory in DLL LoadPath, COM object execution via CLSID allows elevation",
+      "tags": ["dll-injection", "com-elevation", "privilege-escalation", "windows"],
+      "exploitation": "Craft malicious DLL, place in LoadPath, trigger COM object instantiation for code execution as elevated user"
+    },
+    {
+      "id": 19,
+      "name": "AD-WS-Hard-6",
+      "difficulty": "Hard",
+      "port": 2118,
+      "rdp_port": 5118,
+      "ip": "192.168.56.118",
+      "vulnerability": "AD service account abuse (service-for-user-to-self)",
+      "description": "Service account with impersonate privileges can forge its own Kerberos tickets",
+      "tags": ["ad", "kerberos", "privilege-escalation", "service-accounts"],
+      "exploitation": "Use service account to request S4U2Self ticket, forge admin impersonation, gain domain admin privileges"
+    },
+    {
+      "id": 20,
+      "name": "AD-WS-Hard-7",
+      "difficulty": "Hard",
+      "port": 2119,
+      "rdp_port": 5119,
+      "ip": "192.168.56.119",
+      "vulnerability": "Multistage payload + persistence mechanism",
+      "description": "Staged payload delivery combined with persistence via scheduled task, registry, or WMI event subscription",
+      "tags": ["payload", "persistence", "advanced-exploitation", "red-team"],
+      "exploitation": "Deploy multi-stage payload, establish persistence via multiple mechanisms, detect and remove all stages"
+    }
+  ],
+  "global_config": {
+    "domain": "hackossem.local",
+    "network": "192.168.56.0/24",
+    "gateway": "192.168.56.1",
+    "dns": "192.168.56.10",
+    "memory_gb": 4,
+    "cpus": 2,
+    "disk_gb": 60,
+    "os": "Windows Server 2022",
+    "total_labs": 20,
+    "resource_requirements": {
+      "total_memory_gb": 80,
+      "total_disk_gb": 1200,
+      "total_vcpus": 40
+    }
+  }
+}
