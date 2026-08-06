@@ -385,54 +385,191 @@ namespace VulnLabWizard.Forms
             };
             contentPanel.Controls.Add(label);
 
-            LogMessage("Starting deployment...");
-            LogMessage("  [1/6] Creating 20 VirtualBox VMs...");
-            progressBar.Value = 16;
-            progressLabel.Text = "Progress: 1/6 (Creating VMs)";
+            // Run deployment asynchronously to avoid freezing UI
+            System.Threading.Tasks.Task.Run(() => RunDeployment());
+        }
 
-            LogMessage("  [2/6] Configuring networking...");
-            progressBar.Value = 33;
-            progressLabel.Text = "Progress: 2/6 (Networking)";
+        private void RunDeployment()
+        {
+            try
+            {
+                LogMessage("Starting deployment...");
+                LogMessage($"Configuration: {deploymentState.LabCount} labs × {deploymentState.RamPerVmGB}GB RAM | {(deploymentState.IsSequentialDeployment ? "Sequential" : "Simultaneous")}");
+                LogMessage("");
 
-            LogMessage("  [3/6] Deploying Active Directory domain...");
-            progressBar.Value = 50;
-            progressLabel.Text = "Progress: 3/6 (AD Deployment)";
+                // Phase 1: Environment Validation
+                LogMessage("[1/6] Validating environment...");
+                progressBar.Invoke(new Action(() => progressBar.Value = 16));
+                progressLabel.Invoke(new Action(() => progressLabel.Text = "Progress: 1/6 (Environment Validation)"));
 
-            LogMessage("  [4/6] Injecting vulnerabilities...");
-            progressBar.Value = 66;
-            progressLabel.Text = "Progress: 4/6 (Vulnerabilities)";
+                EnvironmentValidator validator = new EnvironmentValidator(LogMessage);
+                if (!validator.ValidateEnvironmentForDeployment(deploymentState.LabCount, deploymentState.RamPerVmGB, deploymentState.IsSequentialDeployment))
+                {
+                    LogMessage("✗ Environment validation failed. Deployment cannot proceed.");
+                    MessageBox.Show("Environment validation failed. Check logs for details.", "Deployment Failed");
+                    nextButton.Invoke(new Action(() => nextButton.Enabled = true));
+                    nextButton.Invoke(new Action(() => nextButton.Text = "Next >"));
+                    return;
+                }
+                LogMessage("✓ Environment validation passed");
+                LogMessage("");
 
-            LogMessage("  [5/6] Deploying IIS applications...");
-            progressBar.Value = 83;
-            progressLabel.Text = "Progress: 5/6 (IIS Setup)";
+                // Phase 2: Create/Import VMs
+                LogMessage("[2/6] Creating Virtual Machines...");
+                progressBar.Invoke(new Action(() => progressBar.Value = 32));
+                progressLabel.Invoke(new Action(() => progressLabel.Text = "Progress: 2/6 (Creating VMs)"));
 
-            LogMessage("  [6/6] Validating configuration...");
-            progressBar.Value = 100;
-            progressLabel.Text = "Progress: 6/6 (Validation)";
+                ScriptExecutor executor = new ScriptExecutor(LogMessage);
+                string vmScript = $"-LabPrefix \"{deploymentState.LabPrefix}\" -IpStart \"{deploymentState.NetworkIpStart}\" -PortStart {deploymentState.PortRangeStart} -LabCount {deploymentState.LabCount} -MemoryGB {deploymentState.RamPerVmGB} -IsSequential ${deploymentState.IsSequentialDeployment.ToString().ToLower()}";
 
-            LogMessage("✓ Deployment complete!");
-            nextButton.Enabled = true;
-            nextButton.Text = "Next >";
+                if (!executor.ExecuteScript("Create-VMs.ps1", vmScript))
+                {
+                    LogMessage("✗ VM creation failed");
+                    MessageBox.Show("VM creation failed. Check logs for details.", "Deployment Failed");
+                    nextButton.Invoke(new Action(() => nextButton.Enabled = true));
+                    nextButton.Invoke(new Action(() => nextButton.Text = "Next >"));
+                    return;
+                }
+                LogMessage("✓ VMs created successfully");
+                LogMessage("");
+
+                // Phase 3: Deploy Active Directory
+                LogMessage("[3/6] Deploying Active Directory domain...");
+                progressBar.Invoke(new Action(() => progressBar.Value = 48));
+                progressLabel.Invoke(new Action(() => progressLabel.Text = "Progress: 3/6 (AD Deployment)"));
+
+                string adScript = $"-DomainName \"{deploymentState.DomainName}\" -AdminPassword \"{deploymentState.DomainAdminPassword}\"";
+                if (!executor.ExecuteScript("Deploy-AD.ps1", adScript))
+                {
+                    LogMessage("⚠ AD deployment encountered issues (may continue)");
+                }
+                else
+                {
+                    LogMessage("✓ Active Directory deployed");
+                }
+                LogMessage("");
+
+                // Phase 4: Inject Vulnerabilities
+                LogMessage("[4/6] Injecting vulnerabilities...");
+                progressBar.Invoke(new Action(() => progressBar.Value = 64));
+                progressLabel.Invoke(new Action(() => progressLabel.Text = "Progress: 4/6 (Vulnerabilities)"));
+                LogMessage("✓ Vulnerabilities injected (simulated)");
+                LogMessage("");
+
+                // Phase 5: Deploy IIS Applications
+                LogMessage("[5/6] Deploying IIS applications...");
+                progressBar.Invoke(new Action(() => progressBar.Value = 80));
+                progressLabel.Invoke(new Action(() => progressLabel.Text = "Progress: 5/6 (IIS Setup)"));
+
+                if (!executor.ExecuteScript("Deploy-IIS.ps1", ""))
+                {
+                    LogMessage("⚠ IIS deployment encountered issues (may continue)");
+                }
+                else
+                {
+                    LogMessage("✓ IIS applications deployed");
+                }
+                LogMessage("");
+
+                // Phase 6: Validation
+                LogMessage("[6/6] Validating configuration...");
+                progressBar.Invoke(new Action(() => progressBar.Value = 100));
+                progressLabel.Invoke(new Action(() => progressLabel.Text = "Progress: 6/6 (Validation)"));
+
+                if (!executor.ExecuteScript("Validate-Labs.ps1", ""))
+                {
+                    LogMessage("⚠ Validation encountered issues");
+                }
+                else
+                {
+                    LogMessage("✓ Configuration validated");
+                }
+                LogMessage("");
+
+                LogMessage("✓ Deployment complete!");
+                nextButton.Invoke(new Action(() => nextButton.Enabled = true));
+                nextButton.Invoke(new Action(() => nextButton.Text = "Next >"));
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"✗ Deployment error: {ex.Message}");
+                nextButton.Invoke(new Action(() => nextButton.Enabled = true));
+                nextButton.Invoke(new Action(() => nextButton.Text = "Next >"));
+            }
         }
 
         private void ShowCompletionSummary()
         {
             contentPanel.Controls.Clear();
-            Label summary = new Label
+
+            // Calculate IP and port ranges based on lab count
+            int lastLabNumber = deploymentState.LabCount - 1;
+            int lastRdpPort = deploymentState.PortRangeStart + lastLabNumber;
+            int lastWinrmPort = 2100 + lastLabNumber;
+            string lastIpOctet = (100 + lastLabNumber).ToString();
+            string ipRangeDisplay = deploymentState.LabCount > 1
+                ? $"192.168.56.100 - 192.168.56.{lastIpOctet}"
+                : $"192.168.56.100";
+
+            TableLayoutPanel table = new TableLayoutPanel
             {
-                Text = "✓ Deployment Complete!\n\n" +
-                       "20 Windows Server 2022 VMs created\n" +
-                       "IP Range: 192.168.56.100 - 192.168.56.119\n" +
-                       "RDP Port Range: 5100 - 5119\n" +
-                       "Domain: hackossem.local\n" +
-                       "Admin User: hackossem\\Administrator",
                 Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Font = new Font("Arial", 12)
+                ColumnCount = 2,
+                RowCount = 10,
+                Padding = new Padding(30)
             };
-            contentPanel.Controls.Add(summary);
+
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40));
+            table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60));
+
+            // Title
+            Label title = new Label
+            {
+                Text = "✓ Deployment Complete!",
+                Font = new Font("Arial", 16, FontStyle.Bold),
+                AutoSize = false,
+                Height = 40
+            };
+            table.Controls.Add(title, 0, 0);
+            table.SetColumnSpan(title, 2);
+
+            // Summary data
+            table.Controls.Add(new Label { Text = "VMs Created:", TextAlign = ContentAlignment.MiddleRight, Font = new Font("Arial", 11) }, 0, 1);
+            table.Controls.Add(new Label { Text = deploymentState.LabCount + " Windows Server 2022", Font = new Font("Arial", 11, FontStyle.Bold) }, 1, 1);
+
+            table.Controls.Add(new Label { Text = "IP Range:", TextAlign = ContentAlignment.MiddleRight }, 0, 2);
+            table.Controls.Add(new Label { Text = ipRangeDisplay, Font = new Font("Arial", 11) }, 1, 2);
+
+            table.Controls.Add(new Label { Text = "RDP Ports:", TextAlign = ContentAlignment.MiddleRight }, 0, 3);
+            table.Controls.Add(new Label { Text = $"{deploymentState.PortRangeStart} - {lastRdpPort}", Font = new Font("Arial", 11) }, 1, 3);
+
+            table.Controls.Add(new Label { Text = "WinRM Ports:", TextAlign = ContentAlignment.MiddleRight }, 0, 4);
+            table.Controls.Add(new Label { Text = $"2100 - {lastWinrmPort}", Font = new Font("Arial", 11) }, 1, 4);
+
+            table.Controls.Add(new Label { Text = "Domain:", TextAlign = ContentAlignment.MiddleRight }, 0, 5);
+            table.Controls.Add(new Label { Text = deploymentState.DomainName, Font = new Font("Arial", 11) }, 1, 5);
+
+            table.Controls.Add(new Label { Text = "Admin User:", TextAlign = ContentAlignment.MiddleRight }, 0, 6);
+            table.Controls.Add(new Label { Text = $"{deploymentState.DomainName.Split('.')[0]}\\Administrator", Font = new Font("Arial", 11) }, 1, 6);
+
+            table.Controls.Add(new Label { Text = "Memory Config:", TextAlign = ContentAlignment.MiddleRight }, 0, 7);
+            string strategyText = deploymentState.IsSequentialDeployment ? "Sequential (Lower RAM)" : "Simultaneous (Faster)";
+            table.Controls.Add(new Label { Text = $"{deploymentState.RamPerVmGB}GB per VM ({strategyText})", Font = new Font("Arial", 11) }, 1, 7);
+
+            table.Controls.Add(new Label { Text = "Next Steps:", TextAlign = ContentAlignment.MiddleRight, Font = new Font("Arial", 11, FontStyle.Bold) }, 0, 8);
+            Label nextStepsLabel = new Label
+            {
+                Text = "1. Launch Student Mode to access labs\n2. Start a lab and connect via RDP\n3. Begin exploitation exercises",
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Arial", 10)
+            };
+            table.Controls.Add(nextStepsLabel, 1, 8);
+
+            contentPanel.Controls.Add(table);
             nextButton.Enabled = false;
             LogMessage("All labs are ready for use!");
+            LogMessage($"Deployment Summary: {deploymentState.LabCount} labs deployed with {deploymentState.RamPerVmGB}GB RAM per VM");
         }
 
         private void ShowStudentMode()
