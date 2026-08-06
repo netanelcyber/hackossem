@@ -1,21 +1,30 @@
 # Create-VMs.ps1
-# Create 20 Windows Server 2022 Virtual Machines using VBoxManage
-# Usage: ./Create-VMs.ps1 -LabPrefix "VulnLab" -IpStart "192.168.56.100" -PortStart 5100
+# Create Windows Server 2022 Virtual Machines using VBoxManage
+# Supports flexible deployment with configurable lab count and per-VM RAM
+# Usage: ./Create-VMs.ps1 -LabPrefix "VulnLab" -IpStart "192.168.56.100" -PortStart 5100 -LabCount 20 -MemoryGB 2 -IsSequential $true
 
 param(
     [string]$LabPrefix = "VulnLab",
     [string]$IpStart = "192.168.56.100",
     [int]$PortStart = 5100,
     [string]$IsoPath = "",
-    [int]$MemoryMB = 2048,
+    [int]$MemoryGB = 2,
     [int]$CpuCount = 2,
-    [int]$DiskGB = 60
+    [int]$DiskGB = 60,
+    [int]$LabCount = 20,
+    [bool]$IsSequential = $true,
+    [int]$SequentialDelaySeconds = 5
 )
 
-Write-Host "Creating 20 Windows Server 2022 Virtual Machines..."
+$MemoryMB = $MemoryGB * 1024
+
+Write-Host "Creating Windows Server 2022 Virtual Machines..."
 Write-Host "Lab Prefix: $LabPrefix"
 Write-Host "IP Start: $IpStart"
 Write-Host "Port Start: $PortStart"
+Write-Host "Lab Count: $LabCount (Flexible Deployment)"
+Write-Host "Memory Per VM: ${MemoryGB}GB"
+Write-Host "Deployment Strategy: $(if ($IsSequential) { 'Sequential (Lower RAM)' } else { 'Simultaneous (Faster)' })"
 Write-Host ""
 
 # Lab definitions
@@ -42,19 +51,23 @@ $labs = @(
     @{ID="Hard-7"; Name="Persistence"}
 )
 
+# Limit labs to requested count
+$labsToCreate = $labs[0..($LabCount-1)]
+
 $counter = 1
-foreach ($lab in $labs) {
+foreach ($lab in $labsToCreate) {
     $vmName = "$LabPrefix-ad-lab-$counter"
     $ipOctet = 100 + $counter - 1
     $ip = "192.168.56.$ipOctet"
     $port = $PortStart + $counter - 1
     $winrmPort = 2100 + $counter - 1
 
-    Write-Host "[$counter/20] Creating $vmName..."
+    Write-Host "[$counter/$LabCount] Creating $vmName..."
     Write-Host "  Name: $vmName"
     Write-Host "  IP: $ip"
     Write-Host "  RDP Port: $port"
     Write-Host "  WinRM Port: $winrmPort"
+    Write-Host "  Memory: ${MemoryGB}GB"
 
     # Create VM using VBoxManage
     $createCmd = @(
@@ -70,8 +83,15 @@ foreach ($lab in $labs) {
     Write-Host "  Status: Created (simulated)"
     Write-Host ""
 
+    # Sequential deployment: add delay between VM creation
+    if ($IsSequential -and $counter -lt $LabCount) {
+        Write-Host "  Waiting ${SequentialDelaySeconds} seconds before next VM..."
+        Start-Sleep -Seconds $SequentialDelaySeconds
+    }
+
     $counter++
 }
 
-Write-Host "All VMs created successfully!"
+Write-Host "All $LabCount VMs created successfully!"
+Write-Host "Total RAM Required: $(($LabCount * $MemoryGB))GB (Simultaneous) or $(($MemoryGB * 2))GB (Sequential)"
 exit 0

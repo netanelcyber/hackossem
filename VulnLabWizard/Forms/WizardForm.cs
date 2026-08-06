@@ -252,7 +252,7 @@ namespace VulnLabWizard.Forms
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
-                RowCount = 6,
+                RowCount = 11,
                 Padding = new Padding(20)
             };
 
@@ -264,28 +264,110 @@ namespace VulnLabWizard.Forms
             TextBox labPrefixBox = new TextBox { Text = "VulnLab", Dock = DockStyle.Fill };
             table.Controls.Add(labPrefixBox, 1, 0);
 
+            // Lab Count Selection
+            table.Controls.Add(new Label { Text = "Number of Labs:", TextAlign = ContentAlignment.MiddleRight }, 0, 1);
+            ComboBox labCountBox = new ComboBox { Dock = DockStyle.Fill };
+            labCountBox.Items.AddRange(new object[] { "5 Labs (Minimum)", "10 Labs", "15 Labs", "20 Labs (Full)" });
+            labCountBox.SelectedIndex = 3;
+            labCountBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            table.Controls.Add(labCountBox, 1, 1);
+
+            // RAM Per VM Configuration
+            table.Controls.Add(new Label { Text = "RAM Per VM (GB):", TextAlign = ContentAlignment.MiddleRight }, 0, 2);
+            TrackBar ramSlider = new TrackBar
+            {
+                Dock = DockStyle.Fill,
+                Minimum = 1,
+                Maximum = 4,
+                Value = 2,
+                TickStyle = TickStyle.BottomRight
+            };
+            Label ramLabel = new Label { Text = "2 GB", TextAlign = ContentAlignment.MiddleLeft };
+            ramSlider.ValueChanged += (s, e) =>
+            {
+                ramLabel.Text = ramSlider.Value + " GB";
+                UpdateResourceCalculation(labCountBox, ramSlider, deploymentStrategyPanel, estimatedResourcesLabel);
+            };
+            Panel ramPanel = new Panel { Dock = DockStyle.Fill };
+            ramPanel.Controls.Add(ramLabel);
+            ramPanel.Controls.Add(ramSlider);
+            table.Controls.Add(ramPanel, 1, 2);
+
+            // Deployment Strategy
+            table.Controls.Add(new Label { Text = "Deployment Strategy:", TextAlign = ContentAlignment.MiddleRight }, 0, 3);
+            Panel deploymentStrategyPanel = new Panel { Dock = DockStyle.Fill };
+            RadioButton sequentialRadio = new RadioButton { Text = "Sequential (Lower RAM)", Left = 10, Top = 5, Checked = true };
+            RadioButton simultaneousRadio = new RadioButton { Text = "Simultaneous (Faster)", Left = 10, Top = 30 };
+            deploymentStrategyPanel.Controls.AddRange(new Control[] { sequentialRadio, simultaneousRadio });
+            deploymentStrategyPanel.Height = 60;
+            table.Controls.Add(deploymentStrategyPanel, 1, 3);
+
             // Network IP start
-            table.Controls.Add(new Label { Text = "Network IP Start:", TextAlign = ContentAlignment.MiddleRight }, 0, 1);
+            table.Controls.Add(new Label { Text = "Network IP Start:", TextAlign = ContentAlignment.MiddleRight }, 0, 4);
             TextBox ipStartBox = new TextBox { Text = "192.168.56.100", Dock = DockStyle.Fill };
-            table.Controls.Add(ipStartBox, 1, 1);
+            table.Controls.Add(ipStartBox, 1, 4);
 
             // Port start
-            table.Controls.Add(new Label { Text = "Port Range Start:", TextAlign = ContentAlignment.MiddleRight }, 0, 2);
+            table.Controls.Add(new Label { Text = "Port Range Start:", TextAlign = ContentAlignment.MiddleRight }, 0, 5);
             TextBox portStartBox = new TextBox { Text = "5100", Dock = DockStyle.Fill };
-            table.Controls.Add(portStartBox, 1, 2);
+            table.Controls.Add(portStartBox, 1, 5);
 
             // Domain name
-            table.Controls.Add(new Label { Text = "Domain Name:", TextAlign = ContentAlignment.MiddleRight }, 0, 3);
+            table.Controls.Add(new Label { Text = "Domain Name:", TextAlign = ContentAlignment.MiddleRight }, 0, 6);
             TextBox domainBox = new TextBox { Text = "hackossem.local", Dock = DockStyle.Fill };
-            table.Controls.Add(domainBox, 1, 3);
+            table.Controls.Add(domainBox, 1, 6);
 
             // Domain admin password
-            table.Controls.Add(new Label { Text = "Domain Admin Password:", TextAlign = ContentAlignment.MiddleRight }, 0, 4);
+            table.Controls.Add(new Label { Text = "Domain Admin Password:", TextAlign = ContentAlignment.MiddleRight }, 0, 7);
             TextBox passwordBox = new TextBox { Text = "P@ssw0rd!2024", Dock = DockStyle.Fill, UseSystemPasswordChar = true };
-            table.Controls.Add(passwordBox, 1, 4);
+            table.Controls.Add(passwordBox, 1, 7);
+
+            // Separator
+            table.Controls.Add(new Label(), 0, 8);
+            table.Controls.Add(new Label(), 1, 8);
+
+            // Estimated Resources Label
+            Label estimatedResourcesLabel = new Label
+            {
+                Text = "Estimated: 20 VMs × 2GB = 40GB RAM | 200GB Disk | Sequential deployment reduces RAM usage",
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Arial", 9),
+                ForeColor = Color.DarkBlue
+            };
+            table.Controls.Add(estimatedResourcesLabel, 0, 9);
+            table.SetColumnSpan(estimatedResourcesLabel, 2);
+
+            // Warning Label for resource constraints
+            Label warningLabel = new Label
+            {
+                Text = "Recommended: Minimum 10GB RAM for 5-lab deployment | 20GB RAM for all 20 labs with sequential strategy",
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.TopLeft,
+                Font = new Font("Arial", 9),
+                ForeColor = Color.OrangeRed
+            };
+            table.Controls.Add(warningLabel, 0, 10);
+            table.SetColumnSpan(warningLabel, 2);
 
             contentPanel.Controls.Add(table);
             LogMessage("Configure deployment parameters");
+            UpdateResourceCalculation(labCountBox, ramSlider, deploymentStrategyPanel, estimatedResourcesLabel);
+        }
+
+        private void UpdateResourceCalculation(ComboBox labCountBox, TrackBar ramSlider, Panel strategyPanel, Label estimatedLabel)
+        {
+            int labCount = (labCountBox.SelectedIndex + 1) * 5;
+            int ramPerVM = ramSlider.Value;
+            bool isSequential = ((RadioButton)strategyPanel.Controls[0]).Checked;
+
+            long totalRamNeeded = labCount * ramPerVM;
+            long diskPerVM = 10;
+            long totalDiskNeeded = labCount * diskPerVM;
+            long effectiveRamNeeded = isSequential ? (ramPerVM * 2) : totalRamNeeded;
+
+            estimatedLabel.Text = $"Estimated: {labCount} VMs × {ramPerVM}GB = {totalRamNeeded}GB RAM | {totalDiskNeeded}GB Disk | " +
+                                  $"Effective RAM: {effectiveRamNeeded}GB ({(isSequential ? "Sequential" : "Simultaneous")})";
         }
 
         private void ShowDeploymentExecution()

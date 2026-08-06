@@ -30,10 +30,10 @@ namespace VulnLabWizard.Services
                 logCallback?.Invoke("✓ VirtualBox installed and accessible");
             }
 
-            // Check disk space
-            if (!CheckDiskSpace())
+            // Check disk space (dynamic based on lab count)
+            if (!CheckDiskSpace(20, 10))
             {
-                logCallback?.Invoke("ERROR: Insufficient disk space (need 150GB+)");
+                logCallback?.Invoke("ERROR: Insufficient disk space");
                 isValid = false;
             }
             else
@@ -41,15 +41,60 @@ namespace VulnLabWizard.Services
                 logCallback?.Invoke("✓ Sufficient disk space available");
             }
 
-            // Check RAM
-            if (!CheckMemory())
+            // Check RAM (dynamic based on lab count and deployment strategy)
+            if (!CheckMemory(20, 2, false))
             {
-                logCallback?.Invoke("ERROR: Insufficient RAM (need 40GB+ free)");
+                logCallback?.Invoke("ERROR: Insufficient RAM");
                 isValid = false;
             }
             else
             {
                 logCallback?.Invoke("✓ Sufficient RAM available");
+            }
+
+            return isValid;
+        }
+
+        public bool ValidateEnvironmentForDeployment(int labCount, int ramPerVmGB, bool isSequentialDeployment)
+        {
+            logCallback?.Invoke("Validating environment for flexible deployment...");
+            logCallback?.Invoke($"Configuration: {labCount} labs × {ramPerVmGB}GB RAM per VM | Strategy: {(isSequentialDeployment ? "Sequential" : "Simultaneous")}");
+
+            bool isValid = true;
+
+            // Check VirtualBox
+            if (!CheckVirtualBox())
+            {
+                logCallback?.Invoke("ERROR: VirtualBox not installed or not accessible");
+                isValid = false;
+            }
+            else
+            {
+                logCallback?.Invoke("✓ VirtualBox installed and accessible");
+            }
+
+            // Check disk space
+            long diskPerVM = 10;
+            if (!CheckDiskSpace(labCount, diskPerVM))
+            {
+                logCallback?.Invoke($"ERROR: Insufficient disk space (need {labCount * diskPerVM}GB+)");
+                isValid = false;
+            }
+            else
+            {
+                logCallback?.Invoke("✓ Sufficient disk space available");
+            }
+
+            // Check RAM with deployment strategy
+            if (!CheckMemory(labCount, ramPerVmGB, isSequentialDeployment))
+            {
+                long effectiveRamNeeded = isSequentialDeployment ? (ramPerVmGB * 2) : (labCount * ramPerVmGB);
+                logCallback?.Invoke($"ERROR: Insufficient RAM (need {effectiveRamNeeded}GB+)");
+                isValid = false;
+            }
+            else
+            {
+                logCallback?.Invoke("✓ Sufficient RAM available for deployment strategy");
             }
 
             return isValid;
@@ -81,14 +126,15 @@ namespace VulnLabWizard.Services
             }
         }
 
-        private bool CheckDiskSpace()
+        private bool CheckDiskSpace(int labCount = 20, long diskPerVmGB = 10)
         {
             try
             {
                 // Check free space on C: drive
                 DriveInfo drive = new DriveInfo("C");
-                long requiredSpace = 150L * 1024 * 1024 * 1024; // 150 GB
-                logCallback?.Invoke($"Available disk space: {drive.AvailableFreeSpace / (1024 * 1024 * 1024)} GB");
+                long requiredSpace = labCount * diskPerVmGB * 1024 * 1024 * 1024; // Calculate based on lab count
+                long availableGB = drive.AvailableFreeSpace / (1024 * 1024 * 1024);
+                logCallback?.Invoke($"Available disk space: {availableGB} GB | Required: {labCount * diskPerVmGB} GB");
                 return drive.AvailableFreeSpace > requiredSpace;
             }
             catch
@@ -97,16 +143,28 @@ namespace VulnLabWizard.Services
             }
         }
 
-        private bool CheckMemory()
+        private bool CheckMemory(int labCount = 20, int ramPerVmGB = 2, bool isSequentialDeployment = false)
         {
             try
             {
                 // Get available RAM
                 System.Diagnostics.PerformanceCounter ramCounter =
                     new System.Diagnostics.PerformanceCounter("Memory", "Available MBytes");
-                float availableRAM = ramCounter.NextValue();
-                long requiredRAM = 40 * 1024; // 40 GB in MB
-                logCallback?.Invoke($"Available RAM: {availableRAM / 1024} GB");
+                float availableRAM = ramCounter.NextValue() / 1024f; // Convert to GB
+
+                long requiredRAM;
+                if (isSequentialDeployment)
+                {
+                    // Sequential: only need RAM for simultaneous VMs + buffer
+                    requiredRAM = ramPerVmGB * 2; // 2 VMs at a time maximum
+                }
+                else
+                {
+                    // Simultaneous: need RAM for all VMs
+                    requiredRAM = labCount * ramPerVmGB;
+                }
+
+                logCallback?.Invoke($"Available RAM: {availableRAM:F1} GB | Required: {requiredRAM} GB ({(isSequentialDeployment ? "Sequential" : "Simultaneous")})");
                 return availableRAM > requiredRAM;
             }
             catch

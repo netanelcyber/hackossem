@@ -18,5 +18,10 @@ namespace VulnLabWizard.Models
         public int CurrentStep { get; set; } = 0;
         public DateTime StartTime { get; set; }
         public bool IsInProgress { get; set; } = false;
+
+        // Flexible Deployment Configuration
+        public int LabCount { get; set; } = 20;
+        public int RamPerVmGB { get; set; } = 2;
+        public bool IsSequentialDeployment { get; set; } = true;
     }
 }
