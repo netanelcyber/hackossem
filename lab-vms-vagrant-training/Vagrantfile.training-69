@@ -1,0 +1,41 @@
+# -*- mode: ruby -*-
+# Lab 69: Privilege Escalation in AD - Stress (Easy)
+# Base: privesc | Scenario: Stress | Difficulty: Easy
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.hostname = "training-69"
+
+  # Network configuration
+  config.vm.network "private_network", ip: "192.168.64.69"
+  config.vm.network "forwarded_port", guest: 5000, host: 5074
+
+  # VirtualBox configuration
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "VulnLab-Training-training-69"
+    vb.memory = 2048
+    vb.cpus = 2
+  end
+
+  # Sync project directory
+  config.vm.synced_folder "../../", "/home/vagrant/hackossem"
+
+  # Provisioning
+  config.vm.provision "shell", inline: <<-SHELL
+    set -e
+    apt-get update
+    apt-get install -y python3 python3-pip python3-venv git curl
+
+    cd /home/vagrant/hackossem
+    python3 -m venv venv
+    source venv/bin/activate
+
+    pip install --upgrade pip
+    pip install -r requirements.txt
+
+    # Set training mode environment variable
+    export TRAINING_LAB="training-69"
+    export LAB_SCENARIO="Stress"
+    export LAB_DIFFICULTY="Easy"
+  SHELL
+end

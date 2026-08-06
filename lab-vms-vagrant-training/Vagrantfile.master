@@ -1,0 +1,11 @@
+# -*- mode: ruby -*-
+# Master Vagrantfile - Training Platform
+# All 110 labs (5 base + 105 variations)
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+
+  # This file references individual Vagrantfile configs
+  # Use: vagrant up lab-id-number
+  # Or: vagrant up to start all labs
+

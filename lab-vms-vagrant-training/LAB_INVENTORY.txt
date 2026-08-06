@@ -1,0 +1,52 @@
+╔════════════════════════════════════════════════════════════════╗
+║          VulnLab Training Platform - Lab Inventory             ║
+║                    110 Total Labs                              ║
+╚════════════════════════════════════════════════════════════════╝
+
+BASE LABS (5):
+└─ training-001 to training-005
+
+TRAINING VARIATIONS (105):
+├─ training-001 to training-021: Active Directory Basics variations
+├─ training-022 to training-042: LDAP Enumeration variations
+├─ training-043 to training-063: Kerberos & ASREProast variations
+├─ training-064 to training-084: Privilege Escalation variations
+└─ training-085 to training-105: Golden Ticket variations
+
+PORT ASSIGNMENTS:
+├─ Ports 5001-5005: Base labs
+└─ Ports 5006-5110: Training variations
+
+IP ASSIGNMENTS:
+├─ 192.168.56.11-15: Base labs
+└─ 192.168.56.21-125: Training variations
+
+DIFFICULTY DISTRIBUTION:
+├─ Easy (1-7 per base): 35 total labs
+├─ Medium (8-14 per base): 35 total labs
+└─ Hard (15-21 per base): 40 total labs
+
+SCENARIO DISTRIBUTION (7 types):
+├─ Standard: 15 labs
+├─ Advanced: 15 labs
+├─ Hardened: 15 labs
+├─ Mixed: 15 labs
+├─ Extreme: 15 labs
+├─ Custom: 15 labs
+└─ Stress: 15 labs
+
+QUICK LAUNCH COMMANDS:
+
+# All labs (warning: requires 220GB RAM)
+vagrant up
+
+# Labs 1-10 (Easy progression)
+for i in {1..10}; do vagrant up training-$(printf "%03d" $i); done
+
+# Only Hard labs (advanced users)
+for i in {15..21..7}; do vagrant up training-$(printf "%03d" $i); done
+
+# Specific lab
+vagrant ssh training-001
+
+═════════════════════════════════════════════════════════════════

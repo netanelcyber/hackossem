@@ -1,0 +1,41 @@
+# -*- mode: ruby -*-
+# Lab 75: Privilege Escalation in AD - Custom (Medium)
+# Base: privesc | Scenario: Custom | Difficulty: Medium
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.hostname = "training-75"
+
+  # Network configuration
+  config.vm.network "private_network", ip: "192.168.65.75"
+  config.vm.network "forwarded_port", guest: 5000, host: 5080
+
+  # VirtualBox configuration
+  config.vm.provider "virtualbox" do |vb|
+    vb.name = "VulnLab-Training-training-75"
+    vb.memory = 2048
+    vb.cpus = 2
+  end
+
+  # Sync project directory
+  config.vm.synced_folder "../../", "/home/vagrant/hackossem"
+
+  # Provisioning
+  config.vm.provision "shell", inline: <<-SHELL
+    set -e
+    apt-get update
+    apt-get install -y python3 python3-pip python3-venv git curl
+
+    cd /home/vagrant/hackossem
+    python3 -m venv venv
+    source venv/bin/activate
+
+    pip install --upgrade pip
+    pip install -r requirements.txt
+
+    # Set training mode environment variable
+    export TRAINING_LAB="training-75"
+    export LAB_SCENARIO="Custom"
+    export LAB_DIFFICULTY="Medium"
+  SHELL
+end
