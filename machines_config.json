@@ -1,0 +1,213 @@
+{
+  "environment": {
+    "name": "Active Directory Training Lab",
+    "domain": "training.lab",
+    "domainNetbios": "TRAINING",
+    "baseNetwork": "192.168.100.0/24",
+    "gateway": "192.168.100.1",
+    "hypervisor": "VirtualBox",
+    "vboxBase": "C:\\VirtualBox VMs"
+  },
+  "machines": [
+    {
+      "id": 1,
+      "name": "AD-DC01",
+      "displayName": "Primary Domain Controller",
+      "role": "DomainController",
+      "ip": "192.168.100.10",
+      "hostname": "AD-DC01",
+      "os": "Windows Server 2022",
+      "resources": {
+        "memory_mb": 2048,
+        "cpus": 2,
+        "disk_mb": 51200
+      },
+      "features": [
+        "AD-Domain-Services",
+        "DNS",
+        "DHCP"
+      ],
+      "isForestrRoot": true,
+      "description": "ראשי בקר תחום עם שירות DNS ו-DHCP"
+    },
+    {
+      "id": 2,
+      "name": "AD-WS01",
+      "displayName": "Workstation 1",
+      "role": "Workstation",
+      "ip": "192.168.100.20",
+      "hostname": "AD-WS01",
+      "os": "Windows 10 / 11",
+      "resources": {
+        "memory_mb": 2048,
+        "cpus": 2,
+        "disk_mb": 40960
+      },
+      "features": [],
+      "description": "תחנת עבודה 1 - לתרגול משתמשים בתחום"
+    },
+    {
+      "id": 3,
+      "name": "AD-WS02",
+      "displayName": "Workstation 2",
+      "role": "Workstation",
+      "ip": "192.168.100.21",
+      "hostname": "AD-WS02",
+      "os": "Windows 10 / 11",
+      "resources": {
+        "memory_mb": 2048,
+        "cpus": 2,
+        "disk_mb": 40960
+      },
+      "features": [],
+      "description": "תחנת עבודה 2 - לתרגול משתמשים בתחום"
+    },
+    {
+      "id": 4,
+      "name": "AD-SRV01",
+      "displayName": "File Server 1",
+      "role": "FileServer",
+      "ip": "192.168.100.30",
+      "hostname": "AD-SRV01",
+      "os": "Windows Server 2022",
+      "resources": {
+        "memory_mb": 2048,
+        "cpus": 2,
+        "disk_mb": 102400
+      },
+      "features": [
+        "File-Services",
+        "FS-FileServer",
+        "FS-SyncShareService"
+      ],
+      "description": "שרת קבצים 1 - לתרגול שיתוף קבצים בתחום"
+    },
+    {
+      "id": 5,
+      "name": "AD-SRV02",
+      "displayName": "File Server 2",
+      "role": "FileServer",
+      "ip": "192.168.100.31",
+      "hostname": "AD-SRV02",
+      "os": "Windows Server 2022",
+      "resources": {
+        "memory_mb": 2048,
+        "cpus": 2,
+        "disk_mb": 102400
+      },
+      "features": [
+        "File-Services",
+        "FS-FileServer",
+        "FS-SyncShareService"
+      ],
+      "description": "שרת קבצים 2 - לתרגול הוצאה לפועל DFS ו-Replication"
+    },
+    {
+      "id": 6,
+      "name": "AD-WS03",
+      "displayName": "Workstation 3",
+      "role": "Workstation",
+      "ip": "192.168.100.22",
+      "hostname": "AD-WS03",
+      "os": "Windows 10 / 11",
+      "resources": {
+        "memory_mb": 2048,
+        "cpus": 2,
+        "disk_mb": 40960
+      },
+      "features": [],
+      "description": "תחנת עבודה 3 - לתרגול תרחישי קבוצות משתמשים"
+    },
+    {
+      "id": 7,
+      "name": "AD-WS04",
+      "displayName": "Workstation 4",
+      "role": "Workstation",
+      "ip": "192.168.100.23",
+      "hostname": "AD-WS04",
+      "os": "Windows 10 / 11",
+      "resources": {
+        "memory_mb": 2048,
+        "cpus": 2,
+        "disk_mb": 40960
+      },
+      "features": [],
+      "description": "תחנת עבודה 4 - לתרגול תרחישי קבוצות משתמשים"
+    },
+    {
+      "id": 8,
+      "name": "AD-SQL01",
+      "displayName": "SQL Server",
+      "role": "SQLServer",
+      "ip": "192.168.100.40",
+      "hostname": "AD-SQL01",
+      "os": "Windows Server 2022",
+      "resources": {
+        "memory_mb": 4096,
+        "cpus": 4,
+        "disk_mb": 102400
+      },
+      "features": [
+        "NET-Framework-45-Core",
+        "RSAT-AD-Tools"
+      ],
+      "sqlVersion": "SQL Server 2022",
+      "description": "שרת SQL - לתרגול שירותי בסיס נתונים בתחום"
+    },
+    {
+      "id": 9,
+      "name": "AD-MAIL01",
+      "displayName": "Mail Server",
+      "role": "MailServer",
+      "ip": "192.168.100.50",
+      "hostname": "AD-MAIL01",
+      "os": "Windows Server 2022",
+      "resources": {
+        "memory_mb": 3072,
+        "cpus": 3,
+        "disk_mb": 102400
+      },
+      "features": [
+        "RSAT-AD-Tools",
+        "NET-Framework-45-Core"
+      ],
+      "exchangeVersion": "Microsoft Exchange Server 2019",
+      "description": "שרת דואר - לתרגול Exchange בתחום Active Directory"
+    },
+    {
+      "id": 10,
+      "name": "AD-WEB01",
+      "displayName": "Web Server",
+      "role": "WebServer",
+      "ip": "192.168.100.60",
+      "hostname": "AD-WEB01",
+      "os": "Windows Server 2022",
+      "resources": {
+        "memory_mb": 2048,
+        "cpus": 2,
+        "disk_mb": 51200
+      },
+      "features": [
+        "Web-Server",
+        "Web-Asp-Net45",
+        "Web-Mgmt-Tools"
+      ],
+      "description": "שרת אינטרנט - לתרגול IIS בתחום Active Directory"
+    }
+  ],
+  "networkSettings": {
+    "dns": {
+      "primary": "192.168.100.10",
+      "secondary": "8.8.8.8"
+    },
+    "adapter": "Bridged",
+    "adapterName": "Ethernet"
+  },
+  "securityDefaults": {
+    "safeModePassword": "P@ssw0rd123!",
+    "domainAdmin": "Administrator",
+    "domainAdminPassword": "P@ssw0rd123!",
+    "enableAudit": true,
+    "enableDomainNameSystem": true
+  }
+}
