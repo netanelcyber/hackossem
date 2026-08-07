@@ -10,6 +10,8 @@ VM_BASE_PATH="${VM_BASE_PATH:-/mnt/vms}"
 LOG_DIR="${LOG_DIR:-$VM_BASE_PATH/logs}"
 STATE_FILE="$LOG_DIR/deployment.state"
 PARALLEL_JOBS="${PARALLEL_JOBS:-2}"
+INSTALLATION_TIMEOUT="${INSTALLATION_TIMEOUT:-1800}"  # 30 minutes for Windows installation
+BOOT_CHECK_INTERVAL="${BOOT_CHECK_INTERVAL:-10}"      # Check every 10 seconds
 
 # Deployment stages
 STAGE_CHECK="0-check"
@@ -172,6 +174,11 @@ stage_install() {
 
     local machines=$(jq -r '.machines[].name' "$CONFIG_FILE")
     local started=0
+    local total=$(echo "$machines" | wc -l)
+
+    echo ""
+    echo "Starting $total VMs..."
+    echo ""
 
     while IFS= read -r vm_name; do
         print_info "Starting $vm_name..."
@@ -184,9 +191,30 @@ stage_install() {
         sleep 2
     done <<< "$machines"
 
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    print_success "All VMs started ($started/$total)"
+    echo ""
     print_warning "Windows Server installation in progress..."
-    print_info "This typically takes 15-30 minutes per VM"
-    print_info "Check progress: VirtualBox GUI or ./manage_ad_machines.sh status"
+    echo ""
+    echo "Timeline:"
+    echo "  00-05 min: VM boot and BIOS/UEFI POST"
+    echo "  05-15 min: Windows Setup loading and disk initialization"
+    echo "  15-45 min: Windows Server installation (copying files, installing)"
+    echo "  45-60 min: Initial configuration and first boot"
+    echo ""
+    print_info "What's happening now:"
+    echo "  → VMs are booting from Windows Server ISO"
+    echo "  → Unattend.xml is automating the installation"
+    echo "  → Next stage will monitor for boot completion"
+    echo ""
+    print_info "How to monitor:"
+    echo "  1. Open VirtualBox GUI: VirtualBox"
+    echo "  2. Select each VM to see installation progress"
+    echo "  3. Or run in another terminal:"
+    echo "     while true; do clear; ./manage_ad_machines.sh status; sleep 30; done"
+    echo ""
 
     save_state "$STAGE_INSTALL" "in_progress"
     return 0
@@ -194,31 +222,66 @@ stage_install() {
 
 # Stage 3: Configure and deploy
 stage_configure() {
-    print_header "Stage 3: Configuring VMs"
+    print_header "Stage 3: Configuring VMs - Waiting for Installation"
 
     local machines=$(jq -r '.machines[] | "\(.name),\(.ip),\(.role)"' "$CONFIG_FILE")
     local configured=0
+    local total=$(echo "$machines" | wc -l)
+
+    echo ""
+    print_warning "Windows Server installation is in progress..."
+    echo "This typically takes 15-30 minutes per VM"
+    echo ""
 
     while IFS=',' read -r vm_name vm_ip vm_role; do
-        print_info "Configuring $vm_name ($vm_role)..."
+        print_info "Waiting for $vm_name ($vm_role) at $vm_ip..."
 
-        # Wait for VM to be reachable
-        local tries=0
-        while ! ping -c 1 "$vm_ip" &>/dev/null && [ $tries -lt 60 ]; do
-            echo -ne "."
-            sleep 5
-            ((tries++))
+        local elapsed=0
+        local max_wait=$INSTALLATION_TIMEOUT
+        local check_interval=$BOOT_CHECK_INTERVAL
+        local reachable=false
+
+        while [ $elapsed -lt $max_wait ]; do
+            # Try ping
+            if ping -c 1 -W 2 "$vm_ip" &>/dev/null 2>&1; then
+                print_success "$vm_name is reachable at $vm_ip"
+                ((configured++))
+                reachable=true
+                break
+            fi
+
+            # Show progress
+            local percent=$((elapsed * 100 / max_wait))
+            printf "\r  %-60s %3d%% (%d/%dmin)" \
+                "Waiting for boot..." \
+                "$percent" \
+                "$((elapsed / 60))" \
+                "$((max_wait / 60))"
+
+            sleep $check_interval
+            ((elapsed += check_interval))
         done
 
-        if ping -c 1 "$vm_ip" &>/dev/null; then
-            print_success "$vm_name is reachable"
-            ((configured++))
-        else
-            print_warning "$vm_name not reachable yet (may still installing)"
+        echo ""
+
+        if [ "$reachable" = false ]; then
+            print_warning "$vm_name still installing (timeout waiting, may be in Windows setup)"
+            echo "  Expected: 15-30 minutes for Windows Server installation"
+            echo "  Tip: Monitor VM in VirtualBox GUI or check with:"
+            echo "       VBoxManage showvminfo $vm_name"
         fi
+
     done <<< "$machines"
 
-    print_info "Configured $configured VMs"
+    echo ""
+    print_info "VMs checked: $configured online out of $total"
+    echo ""
+    print_warning "Note: Installation continues in background"
+    echo "  - Check back in 10-20 minutes for completion"
+    echo "  - Monitor with: ./manage_ad_machines.sh status"
+    echo "  - View logs with: tail -f $LOG_FILE"
+    echo ""
+
     save_state "$STAGE_CONFIGURE" "complete"
     return 0
 }
