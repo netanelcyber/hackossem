@@ -1,0 +1,127 @@
+# GOAD lab bootstrap — runs once, at first logon, via FirstLogonCommands.
+# Generated per-VM by scripts/build-unattend-iso.sh. Edit the template, not
+# the generated copy under build/.
+#
+# Its only job is to get this machine to a state Ansible can drive:
+# static address, resolvable DNS, WinRM listening. Active Directory itself is
+# promoted later by Ansible, which can order DC -> DNS -> members correctly.
+#
+# Placeholders: @@HOSTNAME@@ @@IP@@ @@PREFIX@@ @@DNS@@ @@ROLE@@
+
+$ErrorActionPreference = 'Stop'
+$log = 'C:\goad-bootstrap.log'
+
+function Write-Step($message) {
+    $line = "[{0}] {1}" -f (Get-Date -Format 'HH:mm:ss'), $message
+    Write-Host $line
+    Add-Content -Path $log -Value $line
+}
+
+function Invoke-Step($name, [scriptblock]$body) {
+    try {
+        & $body
+        Write-Step "OK   $name"
+    } catch {
+        Write-Step "FAIL $name :: $($_.Exception.Message)"
+        throw
+    }
+}
+
+Write-Step "bootstrap starting on @@HOSTNAME@@ (role @@ROLE@@)"
+
+# --- network ---------------------------------------------------------------
+# Host-only segment has no router, so no default gateway is configured. A
+# bogus gateway would only add 'destination unreachable' latency to every
+# off-subnet lookup.
+Invoke-Step 'static address' {
+    $nic = Get-NetAdapter -Physical |
+           Where-Object { $_.Status -eq 'Up' } |
+           Sort-Object ifIndex |
+           Select-Object -First 1
+    if (-not $nic) { throw 'no connected physical adapter found' }
+
+    Get-NetIPAddress -InterfaceIndex $nic.ifIndex -AddressFamily IPv4 `
+        -ErrorAction SilentlyContinue |
+        Remove-NetIPAddress -Confirm:$false -ErrorAction SilentlyContinue
+
+    Remove-NetRoute -InterfaceIndex $nic.ifIndex -AddressFamily IPv4 `
+        -Confirm:$false -ErrorAction SilentlyContinue
+
+    New-NetIPAddress -InterfaceIndex $nic.ifIndex `
+        -IPAddress '@@IP@@' -PrefixLength @@PREFIX@@ | Out-Null
+
+    # DNS is the single most common reason a domain join fails. Members and
+    # secondary DCs point at the forest root; the root points at itself.
+    Set-DnsClientServerAddress -InterfaceIndex $nic.ifIndex `
+        -ServerAddresses @@DNS@@
+
+    Set-NetConnectionProfile -InterfaceIndex $nic.ifIndex `
+        -NetworkCategory Private -ErrorAction SilentlyContinue
+}
+
+# --- WinRM -----------------------------------------------------------------
+# Lab-grade on purpose: HTTP with Basic auth so an Ansible controller on the
+# host can connect without Kerberos or a certificate. Do not copy this to
+# anything reachable from a real network.
+Invoke-Step 'winrm listener' {
+    Enable-PSRemoting -Force -SkipNetworkProfileCheck | Out-Null
+    Set-Item -Path WSMan:\localhost\Service\Auth\Basic        -Value $true -Force
+    Set-Item -Path WSMan:\localhost\Service\AllowUnencrypted  -Value $true -Force
+    Set-Item -Path WSMan:\localhost\Shell\MaxMemoryPerShellMB -Value 2048 -Force
+    Set-Item -Path WSMan:\localhost\MaxEnvelopeSizekb         -Value 8192 -Force
+    Set-Item -Path WSMan:\localhost\Client\TrustedHosts       -Value '*' -Force
+    Restart-Service WinRM -Force
+}
+
+Invoke-Step 'firewall rules' {
+    foreach ($rule in @(
+        @{ Name = 'GOAD-WinRM-HTTP'; Port = 5985 },
+        @{ Name = 'GOAD-WinRM-HTTPS'; Port = 5986 },
+        @{ Name = 'GOAD-RDP';         Port = 3389 }
+    )) {
+        if (-not (Get-NetFirewallRule -Name $rule.Name -ErrorAction SilentlyContinue)) {
+            New-NetFirewallRule -Name $rule.Name -DisplayName $rule.Name `
+                -Enabled True -Direction Inbound -Protocol TCP `
+                -LocalPort $rule.Port -Action Allow | Out-Null
+        }
+    }
+    # ICMP, so wait-for-winrm and health-check can tell "still booting" apart
+    # from "address never came up".
+    if (-not (Get-NetFirewallRule -Name 'GOAD-ICMP' -ErrorAction SilentlyContinue)) {
+        New-NetFirewallRule -Name 'GOAD-ICMP' -DisplayName 'GOAD-ICMP' `
+            -Enabled True -Direction Inbound -Protocol ICMPv4 -IcmpType 8 `
+            -Action Allow | Out-Null
+    }
+}
+
+# --- lab conveniences ------------------------------------------------------
+Invoke-Step 'defender realtime off' {
+    Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
+}
+
+Invoke-Step 'windows update off' {
+    Stop-Service wuauserv -Force -ErrorAction SilentlyContinue
+    Set-Service  wuauserv -StartupType Disabled -ErrorAction SilentlyContinue
+}
+
+# Installing the role binaries here is free wall-clock time: it happens while
+# other VMs are still installing Windows. Promotion stays in Ansible, which is
+# where the ordering between forest root, child DC and members is expressed.
+if ('@@ROLE@@' -like 'dc_*') {
+    Invoke-Step 'ADDS + DNS role binaries' {
+        Install-WindowsFeature -Name AD-Domain-Services, DNS `
+            -IncludeManagementTools | Out-Null
+    }
+}
+
+# --- close out -------------------------------------------------------------
+Invoke-Step 'clear autologon' {
+    $winlogon = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon'
+    Set-ItemProperty -Path $winlogon -Name AutoAdminLogon -Value '0' `
+        -ErrorAction SilentlyContinue
+    Remove-ItemProperty -Path $winlogon -Name DefaultPassword `
+        -ErrorAction SilentlyContinue
+}
+
+Write-Step 'bootstrap complete'
+New-Item -Path 'C:\goad-bootstrap-complete' -ItemType File -Force | Out-Null

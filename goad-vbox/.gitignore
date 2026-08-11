@@ -1,0 +1,5 @@
+# Generated at runtime
+build/
+logs/
+inventory/hosts.ini
+isos/

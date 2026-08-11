@@ -1,0 +1,30 @@
+---
+# Confirm every machine is reachable and is what the inventory claims, before
+# any change is made. Cheap insurance against provisioning half a lab.
+- name: Preflight checks
+  hosts: windows
+  gather_facts: false
+  tasks:
+    - name: WinRM responds
+      ansible.windows.win_ping:
+
+    - name: Collect OS facts
+      ansible.windows.win_shell: |
+        $os = Get-CimInstance Win32_OperatingSystem
+        "$($env:COMPUTERNAME)|$($os.Caption)|$($os.Version)"
+      register: os_probe
+      changed_when: false
+
+    - name: Report identity
+      ansible.builtin.debug:
+        msg: "{{ os_probe.stdout | trim }}"
+
+    - name: Hostname matches inventory name
+      ansible.builtin.assert:
+        that:
+          - os_probe.stdout.split('|')[0] | lower == inventory_hostname | lower
+        fail_msg: >-
+          {{ inventory_hostname }} reports hostname
+          '{{ os_probe.stdout.split('|')[0] }}'. The autounattend ComputerName
+          and the inventory name have diverged.
+        success_msg: "{{ inventory_hostname }}: identity OK"
