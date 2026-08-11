@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
-# Create the L1 "lab in a box" VM: a Linux guest with nested hardware
-# virtualisation enabled, which then runs VirtualBox itself to host the
-# nested variant (Server 2022 DC + three Windows 10 endpoints).
+# Create the L1 "lab in a box" VM: an Xubuntu 22.04+ guest with nested hardware
+# virtualisation enabled, which then runs VirtualBox itself to host the nested
+# variant (one Server 2022 DC + three Server 2022 endpoints).
 #
 #   physical host
-#   └── L1  goad-l1        Debian/Ubuntu, nested-hw-virt on, runs VirtualBox
+#   └── L1  goad-l1        Xubuntu 22.04+, nested-hw-virt on, runs VirtualBox
 #       ├── dc01           Windows Server 2022, forest root
-#       ├── ws01           Windows 10
-#       ├── ws02           Windows 10
-#       └── ws03           Windows 10
+#       ├── ws01           Windows Server 2022
+#       ├── ws02           Windows Server 2022
+#       └── ws03           Windows Server 2022
+#
+# Xubuntu is chosen for L1 because its XFCE desktop idles in well under a
+# gigabyte, leaving the most RAM for the nested Windows guests — and because it
+# is an official Ubuntu flavour, so VirtualBox comes straight from the
+# multiverse repository with no third-party APT source required.
 #
 # Caveat, stated plainly: VirtualBox inside VirtualBox is not a configuration
 # Oracle supports. It generally works on AMD-V and is more fragile on Intel
@@ -21,8 +26,8 @@
 
 L1_NAME="goad-l1"
 L1_CPUS=8
-L1_RAM=14336            # 14 GB: 4 (DC) + 3x2 (endpoints) + headroom for L1
-L1_DISK=250             # dynamically allocated, so this is a ceiling not a cost
+L1_RAM=14336            # 14 GB: 4 (DC) + 3x2.5 (endpoints) + headroom for L1
+L1_DISK=300             # dynamically allocated, so this is a ceiling not a cost
 L1_ISO=""
 CONF=""
 FORCE=false
@@ -30,11 +35,12 @@ FORCE=false
 usage() {
     cat <<'EOF'
 usage: create-l1-host.sh --iso PATH [options]
-  --iso PATH        Linux installer ISO for L1 (Debian 12 or Ubuntu 22.04+)
+  --iso PATH        official Xubuntu 22.04+ desktop ISO for L1
+                    (https://xubuntu.org/download/ — 64-bit desktop)
   --name NAME       L1 VM name (default: goad-l1)
   --cpus N          vCPUs for L1 (default: 8)
   --ram MB          memory for L1 (default: 14336)
-  --disk GB         virtual disk ceiling for L1 (default: 250)
+  --disk GB         virtual disk ceiling for L1 (default: 300)
   --force           recreate L1 if it already exists
 EOF
 }
@@ -107,7 +113,8 @@ fi
 
 log_step "Creating L1 host $L1_NAME"
 
-VBoxManage createvm --name "$L1_NAME" --ostype Debian_64 \
+VBoxManage createvm --name "$L1_NAME" \
+    --ostype "$(vbox_ostype Ubuntu22_LTS_64 Ubuntu_64)" \
     --basefolder "$LAB_VM_BASEFOLDER" --register >/dev/null
 
 disk_path="$LAB_VM_BASEFOLDER/$L1_NAME/$L1_NAME.vdi"
@@ -153,13 +160,13 @@ log_info ""
 log_info "Nested guests will ask for ${nested_ram}MB of L1's ${L1_RAM}MB, leaving $((L1_RAM - nested_ram))MB for Linux itself."
 log_info ""
 log_info "Next:"
-log_info "  1. VBoxManage startvm $L1_NAME --type gui      # install Linux, enable OpenSSH"
-log_info "  2. ssh -p 2222 <user>@127.0.0.1                # from this host"
-log_info "  3. copy templates/l1-provision.sh into L1 and run it (installs VirtualBox)"
-log_info "  4. copy this repo and your Windows ISOs into L1"
+log_info "  1. VBoxManage startvm $L1_NAME --type gui   # install Xubuntu, tick 'OpenSSH server'"
+log_info "  2. ssh -p 2222 <user>@127.0.0.1             # from this host"
+log_info "  3. copy templates/l1-provision.sh into L1 and run it with sudo (installs VirtualBox)"
+log_info "  4. copy this repo and your Windows Server 2022 ISO into L1"
 log_info "  5. inside L1:  bash scripts/deploy-all.sh --variant nested \\"
-log_info "                   --iso-win2022 /isos/WinServer2022.iso \\"
-log_info "                   --iso-win10  /isos/Win10.iso"
+log_info "                   --iso-win2022 /isos/WinServer2022.iso"
 log_info ""
-log_dim "Inside L1 the toolchain is identical — it is VirtualBox there too, so the"
-log_dim "same scripts, unattend media and playbooks apply unchanged."
+log_dim "One ISO covers the whole nested lab: the DC and all three endpoints run"
+log_dim "Windows Server 2022. Inside L1 the toolchain is identical — VirtualBox"
+log_dim "there too — so the same scripts, unattend media and playbooks apply."

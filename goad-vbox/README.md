@@ -55,7 +55,7 @@ Defined in [`lab.conf`](lab.conf) — one table, edited in one place.
 |---------|----------|-------|
 | `full`  | dc01, dc02 (2016) · srv02, srv03 (2019) · ws01 (Win10) | Two-DC forest. |
 | `light` | dc01 (2016) · srv02 (2019) · ws01 (Win10) | Minimal, laptop-friendly. |
-| `nested`| dc01 (Server 2022) · ws01–ws03 (Win10) | Runs **inside** one portable L1 VM — see [Nested topology](#nested-topology). |
+| `nested`| dc01 · ws01–ws03 — **all Windows Server 2022** | Runs **inside** one Xubuntu 22.04+ L1 VM; a single Server 2022 ISO covers the lot. See [Nested topology](#nested-topology). |
 
 All machines share a host-only network on **192.168.56.0/24** (host at
 `.1`), addressed statically from the table.
@@ -133,24 +133,28 @@ scripts/cleanup-vms.sh   --variant full            # add --build to wipe build/
 
 ## Nested topology
 
-`--variant nested` targets a single Server 2022 DC plus three Windows 10
-endpoints running **inside one L1 VM**, so the whole lab is a portable unit.
+`--variant nested` targets a single Server 2022 DC plus three Server 2022
+endpoints running **inside one Xubuntu 22.04+ L1 VM**, so the whole lab is a
+portable unit driven by a single Windows Server 2022 ISO.
 
 ```
 physical host
-└── goad-l1                    Linux, nested-hw-virt ON, runs VirtualBox
+└── goad-l1                    Xubuntu 22.04+, nested-hw-virt ON, runs VirtualBox
     ├── dc01                   Windows Server 2022  (forest root)
-    ├── ws01 / ws02 / ws03     Windows 10
+    ├── ws01 / ws02 / ws03     Windows Server 2022  (endpoints)
 ```
 
 ```bash
-# on the physical host — build the L1 shell:
-scripts/create-l1-host.sh --iso /isos/debian-12.iso
-# then, inside L1:
-sudo bash templates/l1-provision.sh          # installs VirtualBox + Ansible
-scripts/deploy-all.sh --variant nested \
-  --iso-win2022 /isos/WinServer2022.iso --iso-win10 /isos/Win10.iso
+# on the physical host — build the L1 shell from an official Xubuntu ISO:
+scripts/create-l1-host.sh --iso /isos/xubuntu-22.04-desktop-amd64.iso
+# install Xubuntu (tick "OpenSSH server"), then inside L1:
+sudo bash templates/l1-provision.sh          # enables multiverse, installs VirtualBox + Ansible
+scripts/deploy-all.sh --variant nested --iso-win2022 /isos/WinServer2022.iso
 ```
+
+Xubuntu is the L1 choice because its XFCE desktop idles under ~1 GB — the most
+RAM left for the nested guests — and because VirtualBox installs straight from
+Ubuntu's `multiverse`, no third-party APT source required.
 
 > **Honest caveat:** VirtualBox-inside-VirtualBox is **not** supported by
 > Oracle. It generally works on AMD-V and is flakier on Intel VT-x, and nested
