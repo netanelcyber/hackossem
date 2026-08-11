@@ -1,0 +1,39 @@
+---
+# Configuration specific to Domain Controllers
+
+# AD Forest/Domain settings
+dc_role: primary
+forest_mode: 2016
+domain_functional_level: 2016
+domain_name: goad.local
+
+# ADDS (Active Directory Domain Services)
+install_adds: true
+install_dns: true
+install_dhcp: false  # Usually on separate server
+
+# ADCS (Active Directory Certificate Services)
+install_adcs: true
+adcs_ca_type: EnterpriseRoot
+adcs_common_name: "goad-ca"
+adcs_enable_http: true
+
+# Groups to create (for testing)
+create_test_users: true
+create_test_groups: true
+
+# GPO settings
+deploy_gpos: true
+gpo_enforce: false
+
+# DNS configuration
+dns_forwarders:
+  - 8.8.8.8
+  - 8.8.4.4
+
+# Security settings for DC
+enable_recycle_bin: true
+enable_domain_auditing: true
+
+# Replication settings
+replication_enabled: true

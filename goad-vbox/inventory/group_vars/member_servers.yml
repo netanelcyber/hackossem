@@ -1,0 +1,35 @@
+---
+# Configuration specific to Member Servers
+
+# Server role
+server_role: member
+join_domain: true
+domain_name: goad.local
+
+# Features to install
+install_file_services: true
+install_print_services: true
+install_adcs: false  # Can be enabled if needed
+install_dhcp: false
+
+# Service accounts
+create_service_accounts: true
+service_accounts:
+  - name: svc_admin
+    description: "Service account for admin tasks"
+  - name: svc_app
+    description: "Service account for application"
+
+# Shares to create (for testing)
+create_test_shares: true
+test_shares:
+  - name: "shared"
+    path: "C:\\Shared"
+    description: "Test shared folder"
+
+# Security settings
+enable_auditing: true
+
+# Optional services
+sccm_enabled: false  # Set to true to install System Center Configuration Manager
+exchange_enabled: false  # Set to true for Exchange Server
