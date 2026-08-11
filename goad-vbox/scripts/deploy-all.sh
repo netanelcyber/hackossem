@@ -9,6 +9,7 @@ VARIANT="full"
 CONF=""
 ISO_ARGS=()
 SKIP_PROVISION=false
+DOWNLOAD=false
 ASSUME_YES="${ASSUME_YES:-false}"   # read by confirm() in lib/common.sh
 
 usage() {
@@ -16,18 +17,21 @@ usage() {
 usage: deploy-all.sh --variant full|light|nested [--iso-<oskey> PATH ...]
   --variant NAME       VM set to deploy (default: full)
   --iso-<oskey> PATH   Windows media, e.g. --iso-win2019 / --iso-win2022 / --iso-win10
+  --download           fetch any missing ISOs first (scripts/fetch-isos.sh)
   --skip-provision     build and boot the VMs but stop before Ansible
   --yes                do not prompt for confirmation
   --config FILE        alternate lab.conf
 
-Runs: check -> network -> unattend ISOs -> create VMs -> boot ->
-      wait for WinRM -> generate inventory -> provision -> health check.
+Runs: [download] -> [nested preflight] -> check -> network -> unattend ISOs ->
+      create VMs -> boot -> wait for WinRM -> generate inventory ->
+      provision -> health check.
 EOF
 }
 
 while [ $# -gt 0 ]; do
     case "$1" in
         --variant)        VARIANT="$2"; shift 2 ;;
+        --download)       DOWNLOAD=true; shift ;;
         --skip-provision) SKIP_PROVISION=true; shift ;;
         --yes)            ASSUME_YES=true; shift ;;
         --config)         CONF="$2"; shift 2 ;;
@@ -50,6 +54,19 @@ printf '%s\n' "$vm_list" | while IFS= read -r r; do
 done
 log_info ""
 confirm "Create and provision $count VM(s)?" || { log_info "aborted"; exit 0; }
+
+# 0a. nested variant: verify nesting actually reached this L1 host before we
+#     sink time into Windows installs that could never boot.
+if [ "$VARIANT" = nested ]; then
+    bash "$SCRIPTS_DIR/preflight-nested.sh" "${conf_flag[@]}" \
+        || die "nested preflight failed — see above (are you running this inside the L1 VM?)"
+fi
+
+# 0b. fetch any missing ISOs on request.
+if [ "$DOWNLOAD" = true ]; then
+    bash "$SCRIPTS_DIR/fetch-isos.sh" --variant "$VARIANT" "${conf_flag[@]}" \
+        || die "ISO download failed"
+fi
 
 # 1. host readiness (warnings ok, blocking failures stop us)
 bash "$SCRIPTS_DIR/check-requirements.sh" --variant "$VARIANT" "${conf_flag[@]}" \

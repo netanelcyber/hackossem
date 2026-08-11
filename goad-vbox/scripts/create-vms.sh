@@ -49,10 +49,8 @@ declare -A needed_iso=()
 while IFS= read -r record; do
     [ -n "$record" ] || continue
     oskey="$(vm_field "$record" 2)"
-    var="ISO_$oskey"
-    path="${!var:-}"
-    [ -n "$path" ] || die "no ISO configured for '$oskey' (pass --iso-$oskey or set $var in lab.conf)"
-    [ -f "$path" ] || die "ISO not found for '$oskey': $path"
+    path="$(iso_path "$oskey")"
+    [ -f "$path" ] || die "ISO not found for '$oskey': $path (pass --iso-$oskey, set ISO_$oskey, or run scripts/fetch-isos.sh)"
     needed_iso[$oskey]="$path"
 done <<EOF
 $(lab_vms "$VARIANT")

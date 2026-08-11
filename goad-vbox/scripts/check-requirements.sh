@@ -110,14 +110,11 @@ fi
 
 log_step "Windows media"
 while IFS= read -r oskey; do
-    var="ISO_$oskey"
-    path="${!var:-}"
-    if [ -z "$path" ]; then
-        warn "$var not set — pass --iso-$oskey to create-vms.sh or set it in lab.conf"
-    elif [ -f "$path" ]; then
+    path="$(iso_path "$oskey")"
+    if [ -f "$path" ]; then
         log_ok "$oskey $(du -h "$path" 2>/dev/null | cut -f1) $path"
     else
-        fail "$var points at a missing file: $path"
+        warn "$oskey ISO missing at $path — run scripts/fetch-isos.sh --variant $VARIANT, or pass --iso-$oskey"
     fi
 done <<EOF
 $(lab_vms "$VARIANT" | cut -d: -f2 | sort -u)

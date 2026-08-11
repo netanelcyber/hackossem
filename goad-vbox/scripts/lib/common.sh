@@ -47,6 +47,22 @@ load_config() {
     . "$conf"
     LAB_BUILD_DIR="${LAB_BUILD_DIR:-$BUILD_DIR_DEFAULT}"
     [ -n "$LAB_BUILD_DIR" ] || LAB_BUILD_DIR="$BUILD_DIR_DEFAULT"
+    LAB_ISO_DIR="${LAB_ISO_DIR:-$REPO_DIR/isos}"
+    [ -n "$LAB_ISO_DIR" ] || LAB_ISO_DIR="$REPO_DIR/isos"
+}
+
+# iso_path <oskey> -> the ISO to use for that OS key.
+# An explicit ISO_<oskey> wins (from lab.conf or --iso-<oskey>); otherwise it
+# defaults to the canonical download location, so fetch-isos.sh output is found
+# automatically with no flags.
+iso_path() {
+    local oskey="$1" var="ISO_$1"
+    local explicit="${!var:-}"
+    if [ -n "$explicit" ]; then
+        printf '%s' "$explicit"
+    else
+        printf '%s/%s.iso' "$LAB_ISO_DIR" "$oskey"
+    fi
 }
 
 # lab_vms <variant> -> one "name:os:ram:cpu:disk:octet:role" record per line
