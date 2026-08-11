@@ -7,6 +7,7 @@
 VARIANT="full"
 CONF=""
 FORCE=false
+NO_NET_CHECK=false
 
 usage() {
     cat <<'EOF'
@@ -15,16 +16,20 @@ usage: create-vms.sh [options]
   --iso-<oskey> PATH            media for an OS key used by the variant,
                                 e.g. --iso-win2019, --iso-win2022, --iso-win10
   --force                       recreate VMs that already exist
+  --no-net-check                generate VM definitions even if the host-only
+                                interface does not exist yet (offline authoring;
+                                the NICs still reference it by name)
   --config FILE                 alternate lab.conf
 EOF
 }
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        --variant) VARIANT="$2"; shift 2 ;;
-        --force)   FORCE=true; shift ;;
-        --config)  CONF="$2"; shift 2 ;;
-        -h|--help) usage; exit 0 ;;
+        --variant)      VARIANT="$2"; shift 2 ;;
+        --force)        FORCE=true; shift ;;
+        --no-net-check) NO_NET_CHECK=true; shift ;;
+        --config)       CONF="$2"; shift 2 ;;
+        -h|--help)      usage; exit 0 ;;
         # --iso-<oskey> sets ISO_<oskey>, so new OS keys in lab.conf need no
         # matching change here.
         --iso-*)
@@ -40,8 +45,17 @@ done
 load_config "${CONF:-}"
 require_cmd VBoxManage "install VirtualBox"
 
-ifname="$(hostonly_require)"
-log_dim "host-only interface: $ifname"
+if [ "$NO_NET_CHECK" = true ]; then
+    # Offline authoring: use the interface if it happens to exist, otherwise
+    # fall back to the conventional name. The generated NIC records that name;
+    # run network-setup.sh before booting so the interface actually exists.
+    ifname="$(hostonly_find)"
+    [ -n "$ifname" ] || ifname="vboxnet0"
+    log_warn "network check skipped — NICs will reference '$ifname'; create it with network-setup.sh before booting"
+else
+    ifname="$(hostonly_require)"
+    log_dim "host-only interface: $ifname"
+fi
 
 # Validate every ISO the chosen variant needs before creating anything, so a
 # missing path fails immediately instead of halfway through.
