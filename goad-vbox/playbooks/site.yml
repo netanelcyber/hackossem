@@ -1,0 +1,7 @@
+---
+# Full provisioning run, in dependency order:
+#   preflight -> forest root -> domain join -> content
+- ansible.builtin.import_playbook: 00-preflight.yml
+- ansible.builtin.import_playbook: 10-forest-root.yml
+- ansible.builtin.import_playbook: 20-domain-join.yml
+- ansible.builtin.import_playbook: 30-lab-content.yml

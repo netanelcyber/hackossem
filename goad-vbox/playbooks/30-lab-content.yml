@@ -1,0 +1,44 @@
+---
+# Populate the domain with users, groups, and one deliberately weak
+# configuration so the lab has something to practice against. Runs against the
+# root DC only; AD replicates the rest.
+#
+# This is intentionally a small, self-contained seed rather than the full GOAD
+# attack scenario. It is idempotent and safe to re-run. Point the official GOAD
+# playbooks at inventory/hosts.ini when you want the complete content.
+- name: Seed domain content
+  hosts: "{{ root_dc_name }}"
+  gather_facts: false
+  vars:
+    ou_base: "OU=GOAD,{{ ('DC=' + domain_name.split('.') | join(',DC=')) }}"
+    lab_users:
+      - { name: jsnow,    display: "Jon Snow",      group: "Domain Users" }
+      - { name: aramis,   display: "Aramis",        group: "Domain Users" }
+      - { name: svc_sql,  display: "SQL Service",   group: "Domain Users" }
+  tasks:
+    - name: Base OU exists
+      microsoft.ad.ou:
+        name: GOAD
+        path: "{{ ('DC=' + domain_name.split('.') | join(',DC=')) }}"
+        state: present
+
+    - name: Lab users exist
+      microsoft.ad.user:
+        name: "{{ item.name }}"
+        display_name: "{{ item.display }}"
+        password: "{{ domain_admin_password }}"
+        password_never_expires: true
+        path: "{{ ou_base }}"
+        state: present
+      loop: "{{ lab_users }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    # A kerberoastable service account: a real SPN on a normal user. This is
+    # the single most common teaching example, and harmless in an isolated lab.
+    - name: Give svc_sql an SPN (kerberoastable by design)
+      ansible.windows.win_shell: |
+        setspn -S MSSQLSvc/sql.{{ domain_name }}:1433 {{ domain_netbios }}\svc_sql
+      register: spn
+      changed_when: "'Updated object' in spn.stdout or 'registered' in spn.stdout | lower"
+      failed_when: spn.rc != 0 and 'Duplicate SPN' not in spn.stdout

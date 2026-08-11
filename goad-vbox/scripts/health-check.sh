@@ -1,116 +1,62 @@
-#!/bin/bash
-##############################################################################
-# GOAD VirtualBox: Health Check
-# Verifies lab is properly configured and provisioned
-##############################################################################
+#!/usr/bin/env bash
+# Verify a provisioned lab: connectivity, domain, membership, seeded content.
 
-set -e
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_FILE="${SCRIPT_DIR}/../logs/health-check.log"
-mkdir -p "$(dirname "$LOG_FILE")"
+VARIANT="full"
+CONF=""
+INVENTORY=""
 
-INVENTORY_FILE=""
-
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
-
-# Parse arguments
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    --inventory)
-      INVENTORY_FILE="$2"
-      shift 2
-      ;;
-    *)
-      echo "Unknown option: $1"
-      exit 1
-      ;;
-  esac
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --variant)   VARIANT="$2";   shift 2 ;;
+        --inventory) INVENTORY="$2"; shift 2 ;;
+        --config)    CONF="$2";      shift 2 ;;
+        -h|--help)   echo "usage: health-check.sh [--variant full|light|nested] [--inventory FILE]"; exit 0 ;;
+        *) die "unknown option: $1" ;;
+    esac
 done
 
-if [[ -z "$INVENTORY_FILE" ]]; then
-  INVENTORY_FILE="${SCRIPT_DIR}/../inventory/hosts.ini"
+load_config "${CONF:-}"
+require_cmd ansible "install Ansible"
+INVENTORY="${INVENTORY:-$REPO_DIR/inventory/hosts.ini}"
+[ -f "$INVENTORY" ] || die "inventory not found: $INVENTORY (generate it or pass --inventory)"
+
+export ANSIBLE_CONFIG="$REPO_DIR/ansible.cfg"
+failed=0
+check() { if eval "$2" >/dev/null 2>&1; then log_ok "$1"; else log_err "$1"; failed=$((failed + 1)); fi; }
+
+root_dc="$(lab_root_dc_name "$VARIANT")"
+
+log_step "Connectivity"
+check "all hosts answer WinRM" \
+    "ansible -i '$INVENTORY' windows -m ansible.windows.win_ping"
+
+log_step "Active Directory on $root_dc"
+check "forest root reports domain $GOAD_DOMAIN" \
+    "ansible -i '$INVENTORY' $root_dc -m ansible.windows.win_shell \
+        -a '(Get-ADDomain).DNSRoot' | grep -q '$GOAD_DOMAIN'"
+
+check "seeded user jsnow exists" \
+    "ansible -i '$INVENTORY' $root_dc -m ansible.windows.win_shell \
+        -a 'Get-ADUser -Identity jsnow' "
+
+check "kerberoastable SPN present on svc_sql" \
+    "ansible -i '$INVENTORY' $root_dc -m ansible.windows.win_shell \
+        -a 'setspn -L $GOAD_NETBIOS\\svc_sql' | grep -qi MSSQLSvc"
+
+log_step "Domain membership"
+# Only meaningful if the variant has members; light/full/nested all do.
+if ansible -i "$INVENTORY" domain_members --list-hosts >/dev/null 2>&1; then
+    check "all members report domain $GOAD_DOMAIN" \
+        "ansible -i '$INVENTORY' domain_members -m ansible.windows.win_shell \
+            -a '(Get-CimInstance Win32_ComputerSystem).Domain' | grep -q '$GOAD_DOMAIN'"
 fi
 
-echo "GOAD VirtualBox Health Check" | tee "$LOG_FILE"
-echo "============================" | tee -a "$LOG_FILE"
-echo "Inventory: $INVENTORY_FILE" | tee -a "$LOG_FILE"
-echo
-
-CHECKS_PASSED=0
-CHECKS_FAILED=0
-
-# Check 1: VMs running
-echo "Checking VMs..." | tee -a "$LOG_FILE"
-running_vms=$(VBoxManage list runningvms | wc -l)
-if [[ $running_vms -gt 0 ]]; then
-  echo -e "${GREEN}✓${NC} $running_vms VM(s) running" | tee -a "$LOG_FILE"
-  ((CHECKS_PASSED++))
-else
-  echo -e "${RED}✗${NC} No VMs running" | tee -a "$LOG_FILE"
-  ((CHECKS_FAILED++))
+log_info ""
+if [ "$failed" -eq 0 ]; then
+    log_ok "lab healthy"
+    exit 0
 fi
-
-# Check 2: WinRM connectivity
-echo | tee -a "$LOG_FILE"
-echo "Checking WinRM connectivity..." | tee -a "$LOG_FILE"
-if command -v ansible &> /dev/null; then
-  if ansible -i "$INVENTORY_FILE" windows -m win_ping --limit dc01 &>/dev/null; then
-    echo -e "${GREEN}✓${NC} WinRM connectivity OK" | tee -a "$LOG_FILE"
-    ((CHECKS_PASSED++))
-  else
-    echo -e "${RED}✗${NC} WinRM connectivity failed" | tee -a "$LOG_FILE"
-    echo "     Run: ansible -i $INVENTORY_FILE windows -m win_ping -vvv" | tee -a "$LOG_FILE"
-    ((CHECKS_FAILED++))
-  fi
-else
-  echo -e "${YELLOW}⚠${NC} Ansible not installed, skipping WinRM check" | tee -a "$LOG_FILE"
-fi
-
-# Check 3: Domain exists
-echo | tee -a "$LOG_FILE"
-echo "Checking Active Directory..." | tee -a "$LOG_FILE"
-if command -v ansible &> /dev/null; then
-  if ansible -i "$INVENTORY_FILE" dc01 -m win_command -a "Get-ADDomain" 2>/dev/null | grep -q "goad.local"; then
-    echo -e "${GREEN}✓${NC} Domain 'goad.local' exists" | tee -a "$LOG_FILE"
-    ((CHECKS_PASSED++))
-  else
-    echo -e "${RED}✗${NC} Domain 'goad.local' not found" | tee -a "$LOG_FILE"
-    ((CHECKS_FAILED++))
-  fi
-else
-  echo -e "${YELLOW}⚠${NC} Ansible not installed, skipping domain check" | tee -a "$LOG_FILE"
-fi
-
-# Check 4: Users created
-echo | tee -a "$LOG_FILE"
-echo "Checking AD users..." | tee -a "$LOG_FILE"
-if command -v ansible &> /dev/null; then
-  user_count=$(ansible -i "$INVENTORY_FILE" dc01 -m win_command -a "Get-ADUser -Filter * | Measure-Object | Select-Object -ExpandProperty Count" 2>/dev/null | grep -oE "[0-9]+" | head -1 || echo "0")
-  if [[ $user_count -gt 10 ]]; then
-    echo -e "${GREEN}✓${NC} $user_count AD users found" | tee -a "$LOG_FILE"
-    ((CHECKS_PASSED++))
-  else
-    echo -e "${RED}✗${NC} Fewer than expected AD users ($user_count)" | tee -a "$LOG_FILE"
-    ((CHECKS_FAILED++))
-  fi
-else
-  echo -e "${YELLOW}⚠${NC} Ansible not installed, skipping user check" | tee -a "$LOG_FILE"
-fi
-
-# Summary
-echo | tee -a "$LOG_FILE"
-echo "============================" | tee -a "$LOG_FILE"
-echo "Checks passed: $CHECKS_PASSED" | tee -a "$LOG_FILE"
-echo "Checks failed: $CHECKS_FAILED" | tee -a "$LOG_FILE"
-
-if [[ $CHECKS_FAILED -eq 0 ]]; then
-  echo -e "${GREEN}✓ Lab is healthy!${NC}" | tee -a "$LOG_FILE"
-  exit 0
-else
-  echo -e "${RED}✗ Lab has issues, see above${NC}" | tee -a "$LOG_FILE"
-  exit 1
-fi
+log_err "$failed check(s) failed"
+exit 1

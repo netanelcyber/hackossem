@@ -1,0 +1,52 @@
+---
+# Promote the forest root DC and wait for AD to come up. Runs before members
+# join, because they resolve the domain against this machine.
+- name: Promote forest root domain controller
+  hosts: domain_controllers
+  gather_facts: false
+  # Serial so a child DC (if the variant has one) is never promoted in parallel
+  # with the root it depends on.
+  serial: 1
+  tasks:
+    - name: This DC is the forest root
+      ansible.builtin.set_fact:
+        is_root: "{{ inventory_hostname == root_dc_name }}"
+
+    - name: Install AD DS + DNS role
+      ansible.windows.win_feature:
+        name:
+          - AD-Domain-Services
+          - DNS
+        include_management_tools: true
+      register: adds_feature
+
+    # --- forest root ------------------------------------------------------
+    - name: Create the forest
+      microsoft.ad.domain:
+        dns_domain_name: "{{ domain_name }}"
+        domain_netbios_name: "{{ domain_netbios }}"
+        safe_mode_password: "{{ safe_mode_password }}"
+        domain_mode: "{{ forest_mode }}"
+        forest_mode: "{{ forest_mode }}"
+        reboot: true
+      when: is_root
+
+    # --- additional DC ----------------------------------------------------
+    - name: Join as an additional domain controller
+      microsoft.ad.domain_controller:
+        dns_domain_name: "{{ domain_name }}"
+        safe_mode_password: "{{ safe_mode_password }}"
+        domain_admin_user: "{{ domain_netbios }}\\Administrator"
+        domain_admin_password: "{{ domain_admin_password }}"
+        install_dns: true
+        reboot: true
+      when: not is_root
+
+    - name: Wait for AD Web Services to answer
+      ansible.windows.win_shell: |
+        Get-ADDomain -ErrorAction Stop | Select-Object -ExpandProperty DNSRoot
+      register: ad_ready
+      until: ad_ready.rc == 0 and (ad_ready.stdout | trim) == domain_name
+      retries: 30
+      delay: 20
+      changed_when: false

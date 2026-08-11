@@ -1,73 +1,56 @@
-#!/bin/bash
-##############################################################################
-# GOAD VirtualBox: Network Setup
-# Creates isolated internal network for GOAD VMs
-##############################################################################
+#!/usr/bin/env bash
+# Create the host-only network the lab lives on.
 
-set -e
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_FILE="${SCRIPT_DIR}/../logs/network-setup.log"
-mkdir -p "$(dirname "$LOG_FILE")"
+CONF=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --config) CONF="$2"; shift 2 ;;
+        --variant) shift 2 ;;              # accepted and ignored; net is shared
+        -h|--help) echo "usage: network-setup.sh [--config FILE]"; exit 0 ;;
+        *) die "unknown option: $1" ;;
+    esac
+done
 
-NETWORK_NAME="goad-internal"
-NETWORK_IP="192.168.1.1"
-NETWORK_MASK="255.255.255.0"
-DHCP_LOWER="192.168.1.100"
-DHCP_UPPER="192.168.1.200"
+load_config "${CONF:-}"
+require_cmd VBoxManage "install VirtualBox"
 
-GREEN='\033[0;32m'
-NC='\033[0m'
+log_step "Host-only network on $GOAD_HOSTONLY_HOST_IP/$GOAD_PREFIX"
 
-echo "GOAD VirtualBox Network Setup" | tee "$LOG_FILE"
-echo "=============================" | tee -a "$LOG_FILE"
-echo
+ifname="$(hostonly_find)"
 
-# Check if network already exists
-if VBoxManage list networks | grep -q "Name.*$NETWORK_NAME"; then
-  echo "Network '$NETWORK_NAME' already exists. Verifying configuration..." | tee -a "$LOG_FILE"
-
-  # Get current DHCP status
-  local dhcp_enabled=$(VBoxManage dhcpserver options "$NETWORK_NAME" --id 0 2>/dev/null | grep -c "Enabled" || echo "0")
-
-  if [[ $dhcp_enabled -gt 0 ]]; then
-    echo -e "${GREEN}✓${NC} Network is properly configured." | tee -a "$LOG_FILE"
-    exit 0
-  fi
-fi
-
-echo "Creating internal network: $NETWORK_NAME" | tee -a "$LOG_FILE"
-
-# Try to add DHCP server for the network
-if VBoxManage dhcpserver add \
-  --network="$NETWORK_NAME" \
-  --server-ip="$NETWORK_IP" \
-  --netmask="$NETWORK_MASK" \
-  --lower-ip="$DHCP_LOWER" \
-  --upper-ip="$DHCP_UPPER" \
-  --enable 2>&1 | tee -a "$LOG_FILE"; then
-
-  echo -e "${GREEN}✓${NC} Network created successfully" | tee -a "$LOG_FILE"
-  echo "  Name:       $NETWORK_NAME" | tee -a "$LOG_FILE"
-  echo "  IP:         $NETWORK_IP" | tee -a "$LOG_FILE"
-  echo "  Netmask:    $NETWORK_MASK" | tee -a "$LOG_FILE"
-  echo "  DHCP Range: $DHCP_LOWER - $DHCP_UPPER" | tee -a "$LOG_FILE"
+if [ -n "$ifname" ]; then
+    log_ok "reusing existing interface $ifname"
 else
-  # Network might already exist, try to modify DHCP
-  echo "Network may already exist. Attempting to enable DHCP..." | tee -a "$LOG_FILE"
+    log_info "creating a host-only interface..."
+    created="$(VBoxManage hostonlyif create 2>&1)" || {
+        log_err "$created"
+        die "could not create a host-only interface (on Linux check that the vboxnetadp module is loaded: sudo modprobe vboxnetadp)"
+    }
+    # Output looks like: Interface 'vboxnet0' was successfully created
+    ifname="$(printf '%s' "$created" | grep -oE "'[^']+'" | head -1 | tr -d "'")"
+    [ -n "$ifname" ] || die "could not parse interface name from: $created"
 
-  if VBoxManage dhcpserver modify \
-    --network="$NETWORK_NAME" \
-    --enable 2>&1 | tee -a "$LOG_FILE"; then
-    echo -e "${GREEN}✓${NC} DHCP enabled on existing network" | tee -a "$LOG_FILE"
-  else
-    echo "Warning: Could not verify DHCP configuration" | tee -a "$LOG_FILE"
-  fi
+    VBoxManage hostonlyif ipconfig "$ifname" \
+        --ip "$GOAD_HOSTONLY_HOST_IP" --netmask "$GOAD_NETMASK"
+    log_ok "created $ifname"
 fi
 
-echo
-echo "Verifying network configuration..." | tee -a "$LOG_FILE"
-VBoxManage list networks | grep -A 5 "$NETWORK_NAME" | tee -a "$LOG_FILE"
+# Static addressing comes from autounattend, so a DHCP server on this segment
+# would only be a second source of truth. Turn it off if one exists.
+if VBoxManage list dhcpservers 2>/dev/null | grep -q "HostInterfaceNetworking-$ifname"; then
+    VBoxManage dhcpserver modify --interface "$ifname" --disable 2>/dev/null \
+        && log_ok "disabled DHCP on $ifname (addresses are static)" \
+        || log_warn "could not disable DHCP on $ifname; static addressing may clash"
+else
+    log_dim "no DHCP server on $ifname (correct — addressing is static)"
+fi
 
-echo
-echo -e "${GREEN}✓ Network setup complete${NC}" | tee -a "$LOG_FILE"
+log_info ""
+VBoxManage list hostonlyifs | awk -v n="$ifname" '
+    /^Name:/ { show = ($2 == n) }
+    show && /^(Name|IPAddress|NetworkMask|Status):/ { print "  " $0 }
+'
+log_info ""
+log_ok "network ready — guests will use $GOAD_SUBNET.0/$GOAD_PREFIX, host is $GOAD_HOSTONLY_HOST_IP"

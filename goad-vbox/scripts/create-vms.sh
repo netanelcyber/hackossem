@@ -1,196 +1,146 @@
-#!/bin/bash
-##############################################################################
-# GOAD VirtualBox: VM Creation Script
-# Creates VirtualBox VMs for GOAD (full or light variant)
-##############################################################################
+#!/usr/bin/env bash
+# Create the lab VMs and attach both the Windows ISO and the per-VM unattend
+# ISO, so that starting a VM performs a complete hands-off install.
 
-set -e
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GOAD_DIR="$(dirname "$SCRIPT_DIR")"
-LOG_FILE="$GOAD_DIR/logs/create-vms.log"
-mkdir -p "$(dirname "$LOG_FILE")"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
 VARIANT="full"
-ISO_2016=""
-ISO_2019=""
-DISK_PATH="${HOME}/VirtualBox VMs"
-NETWORK="goad-internal"
+CONF=""
+FORCE=false
 
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-NC='\033[0m'
-
-# Parse arguments
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    --variant)
-      VARIANT="$2"
-      shift 2
-      ;;
-    --iso-2016)
-      ISO_2016="$2"
-      shift 2
-      ;;
-    --iso-2019)
-      ISO_2019="$2"
-      shift 2
-      ;;
-    --disk-path)
-      DISK_PATH="$2"
-      shift 2
-      ;;
-    *)
-      echo "Unknown option: $1"
-      exit 1
-      ;;
-  esac
-done
-
-echo "GOAD VirtualBox VM Creation" | tee "$LOG_FILE"
-echo "===========================" | tee -a "$LOG_FILE"
-echo "Variant: $VARIANT" | tee -a "$LOG_FILE"
-echo
-
-# Validate inputs
-if [[ "$VARIANT" != "full" && "$VARIANT" != "light" ]]; then
-  echo -e "${RED}Error: variant must be 'full' or 'light'${NC}"
-  exit 1
-fi
-
-# Define VMs based on variant
-declare -A vms_os
-declare -A vms_ram
-declare -A vms_cpu
-declare -A vms_disk
-declare -A vms_ip
-
-if [[ "$VARIANT" == "full" ]]; then
-  vms_os[dc01]="Windows2016_64"
-  vms_os[dc02]="Windows2016_64"
-  vms_os[srv02]="Windows2019_64"
-  vms_os[srv03]="Windows2019_64"
-  vms_os[ws01]="Windows10_64"
-
-  for vm in dc01 dc02 srv02 srv03; do
-    vms_ram[$vm]=2048
-    vms_cpu[$vm]=2
-  done
-  vms_ram[ws01]=2048
-  vms_cpu[ws01]=2
-
-  vms_disk[dc01]=60
-  vms_disk[dc02]=60
-  vms_disk[srv02]=60
-  vms_disk[srv03]=60
-  vms_disk[ws01]=40
-
-  vms_ip[dc01]="192.168.1.11"
-  vms_ip[dc02]="192.168.1.12"
-  vms_ip[srv02]="192.168.1.22"
-  vms_ip[srv03]="192.168.1.23"
-  vms_ip[ws01]="192.168.1.30"
-else
-  vms_os[dc01]="Windows2016_64"
-  vms_os[srv02]="Windows2019_64"
-  vms_os[ws01]="Windows10_64"
-
-  for vm in dc01 srv02 ws01; do
-    vms_ram[$vm]=2048
-    vms_cpu[$vm]=2
-  done
-
-  vms_disk[dc01]=60
-  vms_disk[srv02]=60
-  vms_disk[ws01]=40
-
-  vms_ip[dc01]="192.168.1.11"
-  vms_ip[srv02]="192.168.1.22"
-  vms_ip[ws01]="192.168.1.30"
-fi
-
-# Function to create a single VM
-create_vm() {
-  local vm_name=$1
-  local os_type=$2
-  local ram=$3
-  local cpu=$4
-  local disk_size=$5
-
-  echo "Creating VM: $vm_name" | tee -a "$LOG_FILE"
-
-  # Check if VM already exists
-  if VBoxManage list vms | grep -q "\"$vm_name\""; then
-    echo "  WARNING: VM already exists. Skipping." | tee -a "$LOG_FILE"
-    return
-  fi
-
-  # Create VM
-  VBoxManage createvm --name "$vm_name" --ostype "$os_type" --register 2>&1 | tee -a "$LOG_FILE"
-
-  # Create disk
-  local disk_path_full="$DISK_PATH/$vm_name/${vm_name}.vdi"
-  mkdir -p "$(dirname "$disk_path_full")"
-
-  VBoxManage createmedium disk --filename "$disk_path_full" --size $(($disk_size * 1024)) 2>&1 | tee -a "$LOG_FILE"
-
-  # Create storage controller
-  VBoxManage storagectl "$vm_name" --name "SATA" --add sata --controller IntelAHCI 2>&1 | tee -a "$LOG_FILE"
-
-  # Attach disk
-  VBoxManage storageattach "$vm_name" --storagectl "SATA" --port 0 --device 0 --type hdd --medium "$disk_path_full" 2>&1 | tee -a "$LOG_FILE"
-
-  # Attach ISO (if available)
-  if [[ "$os_type" == "Windows2016_64" && -n "$ISO_2016" && -f "$ISO_2016" ]]; then
-    VBoxManage storageattach "$vm_name" --storagectl "SATA" --port 1 --device 0 --type dvddrive --medium "$ISO_2016" 2>&1 | tee -a "$LOG_FILE"
-  elif [[ "$os_type" == "Windows2019_64" && -n "$ISO_2019" && -f "$ISO_2019" ]]; then
-    VBoxManage storageattach "$vm_name" --storagectl "SATA" --port 1 --device 0 --type dvddrive --medium "$ISO_2019" 2>&1 | tee -a "$LOG_FILE"
-  elif [[ "$os_type" == "Windows10_64" ]]; then
-    # For workstations, use 2019 ISO if available (Windows 10 boot environment)
-    if [[ -n "$ISO_2019" && -f "$ISO_2019" ]]; then
-      VBoxManage storageattach "$vm_name" --storagectl "SATA" --port 1 --device 0 --type dvddrive --medium "$ISO_2019" 2>&1 | tee -a "$LOG_FILE"
-    fi
-  fi
-
-  # Configure VM
-  VBoxManage modifyvm "$vm_name" --memory "$ram" --cpus "$cpu" 2>&1 | tee -a "$LOG_FILE"
-  VBoxManage modifyvm "$vm_name" --vram 32 --accelerate3d off 2>&1 | tee -a "$LOG_FILE"
-  VBoxManage modifyvm "$vm_name" --clipboard bidirectional 2>&1 | tee -a "$LOG_FILE"
-
-  # Add network interface
-  VBoxManage modifyvm "$vm_name" --nic1 intnet --intnet1 "$NETWORK" 2>&1 | tee -a "$LOG_FILE"
-
-  # Set boot order
-  VBoxManage modifyvm "$vm_name" --boot1 dvd --boot2 disk --boot3 none --boot4 none 2>&1 | tee -a "$LOG_FILE"
-
-  # Enable RDP
-  VBoxManage modifyvm "$vm_name" --vrde on --vrdeport 3389 2>&1 | tee -a "$LOG_FILE"
-
-  echo -e "${GREEN}✓ VM created: $vm_name${NC}" | tee -a "$LOG_FILE"
+usage() {
+    cat <<'EOF'
+usage: create-vms.sh [options]
+  --variant full|light|nested   which VM set to create (default: full)
+  --iso-<oskey> PATH            media for an OS key used by the variant,
+                                e.g. --iso-win2019, --iso-win2022, --iso-win10
+  --force                       recreate VMs that already exist
+  --config FILE                 alternate lab.conf
+EOF
 }
 
-# Create all VMs
-echo "Creating VMs for GOAD-$VARIANT..." | tee -a "$LOG_FILE"
-echo
-
-for vm_name in "${!vms_os[@]}"; do
-  create_vm "$vm_name" "${vms_os[$vm_name]}" "${vms_ram[$vm_name]}" "${vms_cpu[$vm_name]}" "${vms_disk[$vm_name]}"
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --variant) VARIANT="$2"; shift 2 ;;
+        --force)   FORCE=true; shift ;;
+        --config)  CONF="$2"; shift 2 ;;
+        -h|--help) usage; exit 0 ;;
+        # --iso-<oskey> sets ISO_<oskey>, so new OS keys in lab.conf need no
+        # matching change here.
+        --iso-*)
+            oskey="${1#--iso-}"
+            [ -n "${2:-}" ] || die "$1 needs a path"
+            printf -v "ISO_$oskey" '%s' "$2"
+            export "ISO_$oskey"
+            shift 2 ;;
+        *) die "unknown option: $1" ;;
+    esac
 done
 
-echo
-echo "VirtualBox VM List:" | tee -a "$LOG_FILE"
-VBoxManage list vms | tee -a "$LOG_FILE"
+load_config "${CONF:-}"
+require_cmd VBoxManage "install VirtualBox"
 
-echo
-echo "=== Next Steps ===" | tee -a "$LOG_FILE"
-echo "1. Start each VM with: VBoxManage startvm <vm_name> --type gui" | tee -a "$LOG_FILE"
-echo "2. Install Windows Server/10 on each VM" | tee -a "$LOG_FILE"
-echo "3. Set static IPs:" | tee -a "$LOG_FILE"
-for vm_name in "${!vms_ip[@]}"; do
-  echo "   $vm_name: ${vms_ip[$vm_name]}" | tee -a "$LOG_FILE"
+ifname="$(hostonly_require)"
+log_dim "host-only interface: $ifname"
+
+# Validate every ISO the chosen variant needs before creating anything, so a
+# missing path fails immediately instead of halfway through.
+declare -A needed_iso=()
+while IFS= read -r record; do
+    [ -n "$record" ] || continue
+    oskey="$(vm_field "$record" 2)"
+    var="ISO_$oskey"
+    path="${!var:-}"
+    [ -n "$path" ] || die "no ISO configured for '$oskey' (pass --iso-$oskey or set $var in lab.conf)"
+    [ -f "$path" ] || die "ISO not found for '$oskey': $path"
+    needed_iso[$oskey]="$path"
+done <<EOF
+$(lab_vms "$VARIANT")
+EOF
+
+for key in "${!needed_iso[@]}"; do
+    log_dim "$key -> ${needed_iso[$key]}"
 done
-echo "4. Enable WinRM on each VM (see docs/04-WINRM-SETUP.md)" | tee -a "$LOG_FILE"
-echo "5. Run: bash scripts/apply-provisioning.sh" | tee -a "$LOG_FILE"
 
-echo
-echo -e "${GREEN}✓ VM creation complete${NC}" | tee -a "$LOG_FILE"
+log_step "Creating VMs for GOAD-$VARIANT"
+
+created=0 skipped=0
+
+while IFS= read -r record; do
+    [ -n "$record" ] || continue
+
+    name="$(vm_name  "$record")"
+    oskey="$(vm_field "$record" 2)"
+    ram="$(vm_field   "$record" 3)"
+    cpus="$(vm_field  "$record" 4)"
+    disk="$(vm_field  "$record" 5)"
+    ip="$(vm_ip       "$record")"
+    role="$(vm_field  "$record" 7)"
+
+    win_iso="${needed_iso[$oskey]}"
+    unattend_iso="$LAB_BUILD_DIR/$name/unattend.iso"
+    [ -f "$unattend_iso" ] || die "missing $unattend_iso — run scripts/build-unattend-iso.sh first"
+
+    if vbox_vm_exists "$name"; then
+        if [ "$FORCE" != true ]; then
+            log_warn "$name already exists — skipping (use --force to recreate)"
+            skipped=$((skipped + 1))
+            continue
+        fi
+        vbox_vm_running "$name" && VBoxManage controlvm "$name" poweroff >/dev/null 2>&1 || true
+        sleep 2
+        VBoxManage unregistervm "$name" --delete >/dev/null
+        log_dim "removed existing $name"
+    fi
+
+    case "$oskey" in
+        win2016) ostype="Windows2016_64" ;;
+        win2019) ostype="Windows2019_64" ;;
+        win2022) ostype="$(vbox_ostype Windows2022_64 Windows2019_64)" ;;
+        win10)   ostype="Windows10_64"   ;;
+        *)       ostype="Windows2019_64" ;;
+    esac
+
+    VBoxManage createvm --name "$name" --ostype "$ostype" \
+        --basefolder "$LAB_VM_BASEFOLDER" --register >/dev/null
+
+    vm_dir="$LAB_VM_BASEFOLDER/$name"
+    disk_path="$vm_dir/$name.vdi"
+    VBoxManage createmedium disk --filename "$disk_path" \
+        --size $((disk * 1024)) --format VDI >/dev/null
+
+    VBoxManage storagectl "$name" --name SATA --add sata \
+        --controller IntelAHCI --portcount 4 --bootable on >/dev/null
+
+    VBoxManage storageattach "$name" --storagectl SATA \
+        --port 0 --device 0 --type hdd --medium "$disk_path" >/dev/null
+
+    # Port 1: Windows installation media. Port 2: the generated unattend
+    # volume. Setup scans every volume root for autounattend.xml, which is why
+    # the Windows ISO itself never has to be modified.
+    VBoxManage storageattach "$name" --storagectl SATA \
+        --port 1 --device 0 --type dvddrive --medium "$win_iso" >/dev/null
+    VBoxManage storageattach "$name" --storagectl SATA \
+        --port 2 --device 0 --type dvddrive --medium "$unattend_iso" >/dev/null
+
+    # BIOS firmware to match the MBR layout in autounattend.xml.
+    VBoxManage modifyvm "$name" \
+        --memory "$ram" --cpus "$cpus" --vram 32 \
+        --firmware "$LAB_FIRMWARE" \
+        --nic1 hostonly --hostonlyadapter1 "$ifname" --nictype1 82540EM \
+        --nic2 none --nic3 none --nic4 none \
+        --audio none --usb off \
+        --boot1 dvd --boot2 disk --boot3 none --boot4 none \
+        --rtcuseutc on --clipboard bidirectional >/dev/null
+
+    log_ok "$(printf '%-6s' "$name") ${cpus}cpu ${ram}MB ${disk}GB  $ip  $role"
+    created=$((created + 1))
+
+done <<EOF
+$(lab_vms "$VARIANT")
+EOF
+
+log_info ""
+log_ok "created $created VM(s), skipped $skipped"
+[ "$created" -gt 0 ] && log_dim "next: scripts/deploy-all.sh continues automatically, or start them yourself with VBoxManage startvm <name> --type headless"
+exit 0

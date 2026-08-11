@@ -1,160 +1,73 @@
-#!/bin/bash
-##############################################################################
-# GOAD VirtualBox: Apply Provisioning
-# Runs Ansible playbooks to configure the AD lab
-##############################################################################
+#!/usr/bin/env bash
+# Run the Ansible provisioning against an already-reachable lab.
 
-set -e
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GOAD_DIR="$(dirname "$SCRIPT_DIR")"
-LOG_FILE="$GOAD_DIR/logs/provision.log"
-mkdir -p "$(dirname "$LOG_FILE")"
-
-INVENTORY_FILE=""
 VARIANT="full"
-VERBOSITY="-v"
-DRY_RUN=false
+CONF=""
+INVENTORY=""
+PLAYBOOK=""
+EXTRA=()
 
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+usage() {
+    cat <<'EOF'
+usage: apply-provisioning.sh [options] [-- <extra ansible-playbook args>]
+  --variant full|light|nested   regenerate inventory for this variant first
+  --inventory FILE              use an existing inventory instead of generating
+  --playbook FILE               run one playbook (default: playbooks/site.yml)
+  --check                       ansible dry run
+Anything after -- is passed straight through to ansible-playbook.
+EOF
+}
 
-# Parse arguments
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    --inventory)
-      INVENTORY_FILE="$2"
-      shift 2
-      ;;
-    --variant)
-      VARIANT="$2"
-      shift 2
-      ;;
-    --verbose)
-      VERBOSITY="-vvv"
-      shift
-      ;;
-    --dry-run)
-      DRY_RUN=true
-      shift
-      ;;
-    *)
-      echo "Unknown option: $1"
-      exit 1
-      ;;
-  esac
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --variant)   VARIANT="$2";   shift 2 ;;
+        --inventory) INVENTORY="$2"; shift 2 ;;
+        --playbook)  PLAYBOOK="$2";  shift 2 ;;
+        --config)    CONF="$2";      shift 2 ;;
+        --check)     EXTRA+=(--check); shift ;;
+        --)          shift; EXTRA+=("$@"); break ;;
+        -h|--help)   usage; exit 0 ;;
+        *) die "unknown option: $1" ;;
+    esac
 done
 
-# Set default inventory
-if [[ -z "$INVENTORY_FILE" ]]; then
-  INVENTORY_FILE="$GOAD_DIR/inventory/hosts.ini"
+load_config "${CONF:-}"
+require_cmd ansible-playbook "install Ansible"
+
+PLAYBOOK="${PLAYBOOK:-$REPO_DIR/playbooks/site.yml}"
+[ -f "$PLAYBOOK" ] || die "playbook not found: $PLAYBOOK"
+
+if [ -z "$INVENTORY" ]; then
+    INVENTORY="$REPO_DIR/inventory/hosts.ini"
+    log_step "Regenerating inventory for GOAD-$VARIANT"
+    bash "$SCRIPTS_DIR/generate-inventory.sh" --variant "$VARIANT" --output "$INVENTORY" \
+        ${CONF:+--config "$CONF"}
 fi
+[ -f "$INVENTORY" ] || die "inventory not found: $INVENTORY"
 
-echo "GOAD VirtualBox Provisioning" | tee "$LOG_FILE"
-echo "============================" | tee -a "$LOG_FILE"
-echo "Inventory: $INVENTORY_FILE" | tee -a "$LOG_FILE"
-echo "Variant: $VARIANT" | tee -a "$LOG_FILE"
-echo "Log file: $LOG_FILE" | tee -a "$LOG_FILE"
-echo
-
-# Verify inventory exists
-if [[ ! -f "$INVENTORY_FILE" ]]; then
-  echo -e "${RED}Error: Inventory file not found: $INVENTORY_FILE${NC}"
-  exit 1
+log_step "Connectivity check"
+if ! ansible -i "$INVENTORY" windows -m ansible.windows.win_ping >/dev/null 2>&1; then
+    log_err "not all hosts answer win_ping"
+    log_dim "run scripts/wait-for-winrm.sh --variant $VARIANT first, or debug with:"
+    log_dim "  ansible -i $INVENTORY windows -m ansible.windows.win_ping -vvv"
+    die "aborting before provisioning"
 fi
+log_ok "all hosts answer win_ping"
 
-# Verify Ansible is installed
-if ! command -v ansible-playbook &> /dev/null; then
-  echo -e "${RED}Error: Ansible not installed${NC}"
-  exit 1
-fi
+log_step "Running $(basename "$PLAYBOOK")"
+run_log="$LOG_DIR/provision-$(date +%Y%m%d-%H%M%S).log"
+log_dim "logging to $run_log"
 
-echo "Testing connectivity..." | tee -a "$LOG_FILE"
-if ! ansible -i "$INVENTORY_FILE" windows -m win_ping &>/dev/null; then
-  echo -e "${RED}Error: Cannot connect to VMs via WinRM${NC}"
-  echo "Run: ansible -i $INVENTORY_FILE windows -m win_ping -vvv" | tee -a "$LOG_FILE"
-  exit 1
-fi
-echo -e "${GREEN}✓ Connectivity OK${NC}" | tee -a "$LOG_FILE"
-echo
-
-# Define playbooks to run
-declare -a PLAYBOOKS=(
-  "0-preflight.yml"
-  "1-domain-setup.yml"
-  "2-users-groups.yml"
-  "3-gpo-policies.yml"
-  "4-services.yml"
-  "5-misconfigs.yml"
-)
-
-# Run playbooks
-run_count=0
-fail_count=0
-
-for playbook in "${PLAYBOOKS[@]}"; do
-  playbook_path="$GOAD_DIR/playbooks/$playbook"
-
-  # Skip if playbook doesn't exist
-  if [[ ! -f "$playbook_path" ]]; then
-    echo -e "${YELLOW}⚠ Playbook not found: $playbook (skipping)${NC}" | tee -a "$LOG_FILE"
-    continue
-  fi
-
-  echo
-  echo "================================================" | tee -a "$LOG_FILE"
-  echo "Running playbook: $playbook" | tee -a "$LOG_FILE"
-  echo "================================================" | tee -a "$LOG_FILE"
-
-  # Build ansible-playbook command
-  local cmd="ansible-playbook -i \"$INVENTORY_FILE\" \"$playbook_path\" $VERBOSITY"
-
-  if [[ "$DRY_RUN" == "true" ]]; then
-    cmd="$cmd --check"
-    echo "(Dry-run mode)" | tee -a "$LOG_FILE"
-  fi
-
-  # Run playbook
-  if eval "$cmd" 2>&1 | tee -a "$LOG_FILE"; then
-    echo -e "${GREEN}✓ $playbook completed successfully${NC}" | tee -a "$LOG_FILE"
-    ((run_count++))
-  else
-    echo -e "${RED}✗ $playbook failed${NC}" | tee -a "$LOG_FILE"
-    ((fail_count++))
-
-    # Ask if user wants to continue
-    echo -ne "Continue with next playbook? (y/n): "
-    read -r continue_choice
-    if [[ "$continue_choice" != "y" ]]; then
-      echo "Aborting." | tee -a "$LOG_FILE"
-      exit 1
-    fi
-  fi
-
-  # Small delay between playbooks
-  sleep 2
-done
-
-# Summary
-echo
-echo "================================================" | tee -a "$LOG_FILE"
-echo "Provisioning Complete" | tee -a "$LOG_FILE"
-echo "================================================" | tee -a "$LOG_FILE"
-echo "Playbooks run: $run_count" | tee -a "$LOG_FILE"
-echo "Playbooks failed: $fail_count" | tee -a "$LOG_FILE"
-
-if [[ $fail_count -eq 0 ]]; then
-  echo -e "${GREEN}✓ All playbooks completed successfully!${NC}" | tee -a "$LOG_FILE"
-  echo
-  echo "Next steps:" | tee -a "$LOG_FILE"
-  echo "1. Verify lab: bash scripts/health-check.sh --inventory $INVENTORY_FILE" | tee -a "$LOG_FILE"
-  echo "2. RDP into VMs: xfreerdp /u:goad\\\\Administrator /p:PASSWORD /v:192.168.1.11" | tee -a "$LOG_FILE"
-  echo "3. Start pentesting!" | tee -a "$LOG_FILE"
-  exit 0
+# ANSIBLE_CONFIG so the run uses our ansible.cfg regardless of cwd.
+if ANSIBLE_CONFIG="$REPO_DIR/ansible.cfg" \
+   ansible-playbook -i "$INVENTORY" "$PLAYBOOK" "${EXTRA[@]}" 2>&1 | tee "$run_log"; then
+    log_info ""
+    log_ok "provisioning finished — see scripts/health-check.sh to verify"
 else
-  echo -e "${RED}✗ Some playbooks failed${NC}" | tee -a "$LOG_FILE"
-  echo "Check log file for details: $LOG_FILE" | tee -a "$LOG_FILE"
-  exit 1
+    rc=${PIPESTATUS[0]}
+    log_info ""
+    log_err "ansible-playbook exited $rc (playbooks are idempotent; fix the cause and re-run)"
+    exit "$rc"
 fi

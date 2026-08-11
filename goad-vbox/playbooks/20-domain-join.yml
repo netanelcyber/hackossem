@@ -1,0 +1,32 @@
+---
+# Join member servers and workstations to the domain. bootstrap.ps1 already
+# pointed their DNS at the forest root, which is the precondition that makes
+# this reliable.
+- name: Join members and workstations to the domain
+  hosts: domain_members
+  gather_facts: false
+  tasks:
+    - name: Confirm the domain resolves before attempting to join
+      ansible.windows.win_shell: |
+        (Resolve-DnsName -Name '{{ domain_name }}' -Type A -ErrorAction Stop |
+          Select-Object -First 1).IPAddress
+      register: domain_dns
+      until: domain_dns.rc == 0
+      retries: 20
+      delay: 15
+      changed_when: false
+
+    - name: Join {{ domain_name }}
+      microsoft.ad.membership:
+        dns_domain_name: "{{ domain_name }}"
+        domain_admin_user: "{{ domain_netbios }}\\Administrator"
+        domain_admin_password: "{{ domain_admin_password }}"
+        state: domain
+        reboot: true
+
+    - name: Verify membership
+      ansible.windows.win_shell: |
+        (Get-CimInstance Win32_ComputerSystem).Domain
+      register: joined_domain
+      changed_when: false
+      failed_when: (joined_domain.stdout | trim) != domain_name

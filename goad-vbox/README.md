@@ -1,280 +1,225 @@
-# GOAD VirtualBox + Ansible Setup (No Vagrant)
+# GOAD on VirtualBox — unattended, Ansible-provisioned, no Vagrant
 
-Complete guide for deploying **Game of Active Directory (GOAD)** directly on **VirtualBox** using **Ansible** only—no Vagrant.
+Stand up a [Game of Active Directory](https://github.com/Orange-Cyberdefense/GOAD)–style
+lab on **VirtualBox** with **one command** and **no GUI interaction**. VMs are
+created with `VBoxManage`, Windows installs itself from a generated
+`autounattend.xml`, and Active Directory is promoted by Ansible.
 
-## 🎯 Philosophy: 3-Stage GOAD Breakdown
+No Vagrant. No manual Windows setup. No clicking through OOBE.
 
-GOAD consists of three independent stages:
-
-1. **Templating** → Create ISO/base images
-2. **Providing** → Create VMs (we skip Vagrant entirely; use `VBoxManage` scripts)
-3. **Provisioning** → Configure with Ansible playbooks
-
-By decoupling **providing** from **provisioning**, you can:
-- Use your own VM creation method (VirtualBox directly)
-- Replace Vagrant with any automation tool
-- Run Ansible against ANY Windows machines (existing, cloud, hybrid)
-
-## 📚 Documentation Structure
-
-```
-goad-vbox/
-├── README.md                          # This file
-├── docs/
-│   ├── 01-QUICKSTART.md              # 10-minute setup
-│   ├── 02-VM-CREATION.md             # Creating VMs with VBoxManage
-│   ├── 03-WINDOWS-SETUP.md           # Manual Windows Server config
-│   ├── 04-WINRM-SETUP.md             # Enabling WinRM (critical!)
-│   ├── 05-ANSIBLE-INVENTORY.md       # Building inventory files
-│   ├── 06-RUNNING-PLAYBOOKS.md       # Executing provisioning
-│   ├── 07-TROUBLESHOOTING.md         # Common issues & solutions
-│   └── 08-VARIANTS.md                # GOAD-full vs GOAD-light specs
-├── scripts/
-│   ├── check-requirements.sh          # Verify VirtualBox, Ansible, etc.
-│   ├── create-vms.sh                 # VBoxManage VM creation
-│   ├── network-setup.sh              # Create isolated network
-│   ├── cleanup-vms.sh                # Remove all VMs & storage
-│   ├── health-check.sh               # Verify VM & WinRM connectivity
-│   └── apply-provisioning.sh         # Run Ansible playbooks
-├── inventory/
-│   ├── hosts-template.ini            # Inventory template (CUSTOMIZE!)
-│   ├── group_vars/
-│   │   ├── windows.yml               # Common Windows vars
-│   │   ├── domain_controllers.yml    # DC-specific vars
-│   │   └── member_servers.yml        # Server-specific vars
-│   └── host_vars/
-│       └── dc01.yml                  # Per-host overrides
-├── playbooks/
-│   ├── 0-preflight.yml               # DNS, firewall checks
-│   ├── 1-domain-setup.yml            # Create AD forest/domain
-│   ├── 2-users-groups.yml            # Create AD users & groups
-│   ├── 3-gpo-policies.yml            # Deploy GPOs
-│   ├── 4-services.yml                # Install ADCS, etc.
-│   └── 5-misconfigs.yml              # Create vulnerable configs
-├── templates/
-│   ├── Vagrantfile-reference         # Vagrant spec reference (VM sizes)
-│   ├── ConfigureRemotingForAnsible.ps1 # WinRM setup script
-│   └── unattend.xml-sample           # Windows answer file (optional)
-└── logs/
-    └── (created at runtime)
-```
-
-## 🚀 Quick Start (10 Minutes)
-
-### 1. Check Prerequisites
 ```bash
-cd goad-vbox
-bash scripts/check-requirements.sh
+# after ISOs are in place:
+scripts/deploy-all.sh --variant full \
+  --iso-win2016 /isos/WinServer2016.iso \
+  --iso-win2019 /isos/WinServer2019.iso
 ```
 
-### 2. Create VirtualBox Network
-```bash
-bash scripts/network-setup.sh --variant full
-# Creates isolated network for GOAD VMs
-```
-
-### 3. Create VMs
-```bash
-bash scripts/create-vms.sh --variant full --iso /path/to/WinServer2016.iso
-# Creates 5 VMs for GOAD-full
-```
-
-### 4. Install Windows on Each VM (Manual GUI)
-For each VM:
-```bash
-VBoxManage startvm dc01 --type gui
-# Follow Windows Server installation wizard
-```
-
-### 5. Configure WinRM on Each VM
-Copy and run on each Windows machine (run as Administrator in PowerShell):
-```powershell
-# On Windows machine:
-# Copy ConfigureRemotingForAnsible.ps1 to C:\
-cd C:\
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
-C:\ConfigureRemotingForAnsible.ps1
-```
-
-### 6. Build Inventory
-```bash
-# Edit inventory/hosts-template.ini with your IP addresses
-cp inventory/hosts-template.ini inventory/hosts.ini
-# Update IP addresses, credentials, hostnames
-```
-
-### 7. Run Ansible Provisioning
-```bash
-bash scripts/apply-provisioning.sh --variant full --inventory inventory/hosts.ini
-# Configures all VMs: domain setup, users, groups, policies, etc.
-```
-
-## 🏗️ Architecture: What Gets Created
-
-### GOAD Full (5 VMs)
-| VM | OS | vCPU | RAM | Disk | Role |
-|----|----|----|-----|------|------|
-| **dc01** | Windows Server 2016 | 2 | 2GB | 60GB | Primary DC |
-| **dc02** | Windows Server 2016 | 2 | 2GB | 60GB | Secondary DC |
-| **srv02** | Windows Server 2019 | 2 | 2GB | 60GB | Member Server |
-| **srv03** | Windows Server 2019 | 2 | 2GB | 60GB | Member Server |
-| **ws01** | Windows 10 | 2 | 2GB | 40GB | Workstation |
-
-**Total**: 10 vCPU, 10GB RAM, 280GB disk  
-**Network**: Isolated internal network (192.168.1.0/24)
-
-### GOAD Light (3 VMs)
-| VM | OS | vCPU | RAM | Disk | Role |
-|----|----|----|-----|------|------|
-| **dc01** | Windows Server 2016 | 2 | 2GB | 60GB | Primary DC |
-| **srv02** | Windows Server 2019 | 2 | 2GB | 60GB | Member Server |
-| **ws01** | Windows 10 | 2 | 2GB | 40GB | Workstation |
-
-**Total**: 6 vCPU, 6GB RAM, 160GB disk
-
-## 🔑 Key Differences from Vagrant Setup
-
-| Aspect | Vagrant | VirtualBox Direct |
-|--------|---------|-------------------|
-| **VM Creation** | Vagrantfile + Vagrant CLI | VBoxManage scripts |
-| **Network** | Managed by Vagrant provider plugin | Manual `VBoxManage network` |
-| **Provisioning** | Vagrant + Ansible | Ansible only |
-| **Complexity** | Higher abstraction, less control | Lower, direct VirtualBox API |
-| **Flexibility** | Locked into Vagrant box versioning | Full control over Windows ISO |
-| **Scaling** | Can use plugins (Proxmox, etc.) | Limited to VirtualBox |
-
-## 📋 Workflow Summary
-
-```
-┌─────────────────────────────────────────┐
-│ 1. Check Prerequisites                  │
-│    (VirtualBox, VBoxManage, Ansible)    │
-└──────────────┬──────────────────────────┘
-               ↓
-┌──────────────────────────────────────────┐
-│ 2. Setup VirtualBox Network              │
-│    (Isolated internal network)           │
-└──────────────┬───────────────────────────┘
-               ↓
-┌──────────────────────────────────────────┐
-│ 3. Create VMs with VBoxManage            │
-│    (Disk, vCPU, RAM, NICs)               │
-└──────────────┬───────────────────────────┘
-               ↓
-┌──────────────────────────────────────────┐
-│ 4. Install Windows Server (Manual GUI)   │
-│    - Static IP (192.168.1.x)             │
-│    - Admin password set                  │
-│    - NOT joined to domain yet            │
-└──────────────┬───────────────────────────┘
-               ↓
-┌──────────────────────────────────────────┐
-│ 5. Enable WinRM (Remote Management)      │
-│    - Run ConfigureRemotingForAnsible.ps1 │
-│    - Test connectivity: ansible -i hosts │
-└──────────────┬───────────────────────────┘
-               ↓
-┌──────────────────────────────────────────┐
-│ 6. Create Ansible Inventory              │
-│    (hosts.ini with IPs & credentials)    │
-└──────────────┬───────────────────────────┘
-               ↓
-┌──────────────────────────────────────────┐
-│ 7. Run Ansible Provisioning              │
-│    - Domain creation                     │
-│    - User/group creation                 │
-│    - GPO policies                        │
-│    - Services (ADCS, etc.)               │
-│    - Misconfigs (for testing)            │
-└──────────────┴───────────────────────────┘
-```
-
-## 💾 Prerequisites & Installation
-
-### Linux (Debian/Ubuntu)
-```bash
-# VirtualBox
-sudo apt-get install virtualbox virtualbox-dkms linux-headers-$(uname -r)
-sudo usermod -aG vboxusers $(whoami)
-
-# Ansible
-sudo apt-get install ansible
-
-# VBoxManage should be in PATH automatically
-which VBoxManage
-```
-
-### macOS
-```bash
-# VirtualBox (via Homebrew)
-brew install virtualbox
-
-# Ansible
-brew install ansible
-
-# Verify
-VBoxManage --version
-ansible --version
-```
-
-### Windows (WSL2)
-```bash
-# Inside WSL2:
-sudo apt-get install virtualbox-guest-additions-iso  # Optional
-sudo apt-get install ansible
-
-# VirtualBox on Windows host + WSL2 Ansible
-# (VirtualBox must be installed on Windows, not in WSL)
-```
-
-## 📖 Next Steps
-
-1. **First time?** → [`docs/01-QUICKSTART.md`](docs/01-QUICKSTART.md)
-2. **Creating VMs?** → [`docs/02-VM-CREATION.md`](docs/02-VM-CREATION.md)
-3. **Windows setup?** → [`docs/03-WINDOWS-SETUP.md`](docs/03-WINDOWS-SETUP.md)
-4. **WinRM issues?** → [`docs/04-WINRM-SETUP.md`](docs/04-WINRM-SETUP.md)
-5. **Ansible inventory?** → [`docs/05-ANSIBLE-INVENTORY.md`](docs/05-ANSIBLE-INVENTORY.md)
-6. **Running playbooks?** → [`docs/06-RUNNING-PLAYBOOKS.md`](docs/06-RUNNING-PLAYBOOKS.md)
-7. **Troubleshooting?** → [`docs/07-TROUBLESHOOTING.md`](docs/07-TROUBLESHOOTING.md)
-
-## 🎓 Learning Path
-
-```
-Beginner:
-  1. Read README (you are here)
-  2. Run docs/01-QUICKSTART.md
-  3. Use scripts/create-vms.sh
-
-Intermediate:
-  1. Understand VBoxManage (docs/02-VM-CREATION.md)
-  2. Configure WinRM manually (docs/04-WINRM-SETUP.md)
-  3. Build custom inventory (docs/05-ANSIBLE-INVENTORY.md)
-
-Advanced:
-  1. Modify Ansible playbooks
-  2. Add custom misconfigurations
-  3. Integrate with pen-testing framework
-```
-
-## 🐛 Quick Troubleshooting
-
-| Problem | Quick Fix |
-|---------|-----------|
-| VirtualBox kernel module not loaded | `sudo modprobe vboxdrv` |
-| VMs get no IP | Check network settings, enable DHCP |
-| Ansible connection timeout | Verify WinRM, check firewall |
-| Domain join fails | Verify DNS points to DC |
-| PowerShell execution policy blocks script | `Set-ExecutionPolicy RemoteSigned -Scope Process` |
-
-Full troubleshooting: [`docs/07-TROUBLESHOOTING.md`](docs/07-TROUBLESHOOTING.md)
-
-## 📞 Resources
-
-- **GOAD Official**: https://github.com/Orange-Cyberdefense/GOAD
-- **VirtualBox Manual**: https://www.virtualbox.org/manual/
-- **Ansible Windows**: https://docs.ansible.com/ansible/latest/os_guide/windows.html
-- **WinRM Guide**: https://docs.microsoft.com/en-us/windows/win32/winrm/about-windows-remote-management
+That single command runs: prerequisite check → host-only network → per-VM
+unattend media → VM creation → boot → wait for WinRM → Ansible provisioning →
+health check.
 
 ---
 
-**Ready to build your AD lab?** Start with `bash scripts/check-requirements.sh`!
+## How it works
+
+GOAD has three stages; this project automates all three on VirtualBox:
+
+| Stage | What happens here |
+|-------|-------------------|
+| **Templating** | A per-VM `autounattend.xml` + `bootstrap.ps1` are generated and packed into a tiny ISO (`build-unattend-iso.sh`). |
+| **Providing** | `VBoxManage` creates each VM and attaches the Windows ISO **and** the unattend ISO (`create-vms.sh`). |
+| **Provisioning** | Windows self-installs; `bootstrap.ps1` sets a static IP, DNS and WinRM; then Ansible promotes AD and joins members (`playbooks/`). |
+
+The trick that removes all manual Windows work: Windows Setup scans the root of
+**every** attached volume for `autounattend.xml`. Attaching a second small ISO
+means the Windows media itself is never modified.
+
+```
+generate autounattend.xml + bootstrap.ps1   ──▶  pack into unattend.iso
+create VM, attach [Windows.iso] + [unattend.iso]
+        │
+        ▼
+Windows installs unattended ──▶ first logon runs bootstrap.ps1
+        │                             (static IP, DNS→root DC, WinRM on)
+        ▼
+host waits for :5985 ──▶ Ansible: promote forest ▶ join members ▶ seed content
+```
+
+---
+
+## Variants
+
+Defined in [`lab.conf`](lab.conf) — one table, edited in one place.
+
+| Variant | Machines | Notes |
+|---------|----------|-------|
+| `full`  | dc01, dc02 (2016) · srv02, srv03 (2019) · ws01 (Win10) | Two-DC forest. |
+| `light` | dc01 (2016) · srv02 (2019) · ws01 (Win10) | Minimal, laptop-friendly. |
+| `nested`| dc01 (Server 2022) · ws01–ws03 (Win10) | Runs **inside** one portable L1 VM — see [Nested topology](#nested-topology). |
+
+All machines share a host-only network on **192.168.56.0/24** (host at
+`.1`), addressed statically from the table.
+
+> **Why host-only, not internal?** A VirtualBox *internal* network (`intnet`)
+> is isolated from the host, so an Ansible controller on the host could never
+> reach the guests. Host-only gives host↔guest and guest↔guest with no
+> internet exposure. Since VirtualBox 6.1.28 host-only addresses must fall in
+> `192.168.56.0/21` unless `/etc/vbox/networks.conf` says otherwise — hence
+> `.56`.
+
+---
+
+## Prerequisites
+
+- **VirtualBox 6.1+** (7.0+ for a native `Windows2022_64` OS type; older falls back automatically)
+- **Ansible** with `pywinrm` and the `ansible.windows`, `microsoft.ad`, `community.windows` collections
+- **An ISO writer** — `xorriso`/`genisoimage`/`mkisofs`/`hdiutil`, or none: a
+  pure-Python fallback (`scripts/lib/mkiso.py`) is bundled
+- **Windows evaluation ISOs** for the editions your variant uses
+- Enough RAM/disk for the variant (checked for you)
+
+Verify everything, scaled to your chosen variant:
+
+```bash
+scripts/check-requirements.sh --variant full \
+  --iso-win2016 /isos/WinServer2016.iso --iso-win2019 /isos/WinServer2019.iso
+```
+
+Install the Ansible side:
+
+```bash
+python3 -m pip install pywinrm
+ansible-galaxy collection install ansible.windows microsoft.ad community.windows
+```
+
+---
+
+## Usage
+
+### One-shot (recommended)
+
+```bash
+scripts/deploy-all.sh --variant light \
+  --iso-win2016 /isos/WinServer2016.iso \
+  --iso-win2019 /isos/WinServer2019.iso
+```
+
+Add `--yes` to skip the confirmation prompt, `--skip-provision` to build and
+boot the VMs but stop before Ansible.
+
+### Step by step
+
+Every step is also a standalone script if you want control or to re-run one:
+
+```bash
+scripts/network-setup.sh                       # host-only interface on .56.1
+scripts/build-unattend-iso.sh --variant full   # build/<vm>/unattend.iso
+scripts/create-vms.sh        --variant full --iso-win2016 ... --iso-win2019 ...
+# boot them (deploy-all does this for you):
+#   VBoxManage startvm dc01 --type headless   # etc.
+scripts/wait-for-winrm.sh    --variant full    # blocks until :5985 answers
+scripts/apply-provisioning.sh --variant full   # regenerates inventory, runs site.yml
+scripts/health-check.sh      --variant full
+```
+
+### Verify / tear down
+
+```bash
+scripts/health-check.sh  --variant full
+scripts/cleanup-vms.sh   --variant full            # add --build to wipe build/
+```
+
+---
+
+## Nested topology
+
+`--variant nested` targets a single Server 2022 DC plus three Windows 10
+endpoints running **inside one L1 VM**, so the whole lab is a portable unit.
+
+```
+physical host
+└── goad-l1                    Linux, nested-hw-virt ON, runs VirtualBox
+    ├── dc01                   Windows Server 2022  (forest root)
+    ├── ws01 / ws02 / ws03     Windows 10
+```
+
+```bash
+# on the physical host — build the L1 shell:
+scripts/create-l1-host.sh --iso /isos/debian-12.iso
+# then, inside L1:
+sudo bash templates/l1-provision.sh          # installs VirtualBox + Ansible
+scripts/deploy-all.sh --variant nested \
+  --iso-win2022 /isos/WinServer2022.iso --iso-win10 /isos/Win10.iso
+```
+
+> **Honest caveat:** VirtualBox-inside-VirtualBox is **not** supported by
+> Oracle. It generally works on AMD-V and is flakier on Intel VT-x, and nested
+> Windows guests run several times slower than flat ones. `create-l1-host.sh`
+> tunes L1 for the best chance (nested paging, IOAPIC, KVM paravirt) and
+> refuses early if the host exposes no virtualisation extensions — but if a
+> nested guest won't boot, that's the known trade-off of this choice. The flat
+> `full`/`light` variants remain the reliable path.
+
+---
+
+## Layout
+
+```
+lab.conf                     Single source of truth: VMs, network, creds, ISOs
+ansible.cfg                  WinRM-friendly Ansible defaults
+scripts/
+  deploy-all.sh              End-to-end orchestrator
+  check-requirements.sh      Host readiness, scaled to the variant
+  network-setup.sh           Host-only interface
+  build-unattend-iso.sh      Generate per-VM unattend media
+  create-vms.sh              Create + configure the VMs
+  create-l1-host.sh          Build the nested L1 host
+  wait-for-winrm.sh          Block until installs finish
+  generate-inventory.sh      Inventory from lab.conf (never hand-edited)
+  apply-provisioning.sh      Run the playbooks
+  health-check.sh            Post-build verification
+  cleanup-vms.sh             Tear down
+  lib/common.sh              Shared helpers
+  lib/mkiso.py               Dependency-free ISO9660 writer
+templates/
+  autounattend.xml.tmpl      Unattended-install answer file
+  bootstrap.ps1.tmpl         First-logon: IP, DNS, WinRM, role binaries
+  l1-provision.sh            Sets up VirtualBox+Ansible inside L1
+playbooks/
+  site.yml                   preflight → forest → join → content
+  00-preflight / 10-forest-root / 20-domain-join / 30-lab-content
+docs/
+  ARCHITECTURE.md            Design & data flow
+  TROUBLESHOOTING.md         Failure modes and fixes
+```
+
+`build/` (generated media) and `inventory/hosts.ini` (generated) are
+gitignored.
+
+---
+
+## Security note
+
+This is a **deliberately insecure lab**. WinRM runs over HTTP with Basic auth
+and a shared lab password (`lab.conf`), Defender realtime and Windows Update
+are disabled, and `30-lab-content.yml` plants a kerberoastable service account
+on purpose. Keep it on the isolated host-only network. Do not reuse any of it
+anywhere reachable.
+
+---
+
+## Status
+
+Built and verified on this repo:
+
+- All shell scripts pass `shellcheck -S warning` and were run against a mocked
+  `VBoxManage` (create / idempotent-skip / `--force` / full `deploy-all` chain).
+- `mkiso.py` output is verified by re-parsing the image and by `file(1)`;
+  payloads round-trip by SHA-256.
+- Generated `autounattend.xml` is XML-validated for every VM; playbook YAML
+  parses.
+
+Not yet exercised here (needs real hardware): the actual Windows installs,
+live WinRM, and the Ansible AD promotion. Those steps are wired and validated
+as far as is possible without a hypervisor, but have not been run against real
+guests.

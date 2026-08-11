@@ -1,89 +1,72 @@
-#!/bin/bash
-##############################################################################
-# GOAD VirtualBox: Cleanup Script
-# Removes all GOAD VMs and their storage
-##############################################################################
+#!/usr/bin/env bash
+# Power off and delete the VMs for a variant, and optionally the L1 host and
+# generated build artifacts.
 
-set -e
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_FILE="${SCRIPT_DIR}/../logs/cleanup.log"
-mkdir -p "$(dirname "$LOG_FILE")"
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
 VARIANT="full"
+CONF=""
+DROP_L1=false
+DROP_BUILD=false
+ASSUME_YES="${ASSUME_YES:-false}"   # read by confirm() in lib/common.sh
 
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-GREEN='\033[0;32m'
-NC='\033[0m'
+usage() {
+    cat <<'EOF'
+usage: cleanup-vms.sh [--variant full|light|nested] [options]
+  --l1        also delete the goad-l1 nested host
+  --build     also delete generated build/ artifacts
+  --yes       do not prompt
+EOF
+}
 
-# Parse arguments
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    --variant)
-      VARIANT="$2"
-      shift 2
-      ;;
-    --force)
-      FORCE=true
-      shift
-      ;;
-    *)
-      echo "Unknown option: $1"
-      exit 1
-      ;;
-  esac
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --variant) VARIANT="$2"; shift 2 ;;
+        --l1)      DROP_L1=true; shift ;;
+        --build)   DROP_BUILD=true; shift ;;
+        --yes)     ASSUME_YES=true; shift ;;
+        --config)  CONF="$2"; shift 2 ;;
+        -h|--help) usage; exit 0 ;;
+        *) die "unknown option: $1" ;;
+    esac
 done
 
-echo -e "${RED}GOAD VirtualBox Cleanup${NC}" | tee "$LOG_FILE"
-echo "========================" | tee -a "$LOG_FILE"
+load_config "${CONF:-}"
+require_cmd VBoxManage
 
-# Define VMs based on variant
-if [[ "$VARIANT" == "full" ]]; then
-  VMS=(dc01 dc02 srv02 srv03 ws01)
+targets=()
+while IFS= read -r record; do
+    [ -n "$record" ] || continue
+    targets+=("$(vm_name "$record")")
+done <<EOF
+$(lab_vms "$VARIANT")
+EOF
+[ "$DROP_L1" = true ] && targets+=("goad-l1")
+
+log_step "Cleanup for GOAD-$VARIANT"
+existing=()
+for name in "${targets[@]}"; do
+    vbox_vm_exists "$name" && existing+=("$name")
+done
+
+if [ "${#existing[@]}" -eq 0 ]; then
+    log_info "no matching VMs registered"
 else
-  VMS=(dc01 srv02 ws01)
-fi
-
-# Show what will be deleted
-echo
-echo "This will DELETE the following VMs and all their data:" | tee -a "$LOG_FILE"
-for vm in "${VMS[@]}"; do
-  echo "  - $vm" | tee -a "$LOG_FILE"
-done
-
-echo
-if [[ "$FORCE" != "true" ]]; then
-  echo -ne "Are you sure? (type 'yes' to confirm): "
-  read -r confirmation
-
-  if [[ "$confirmation" != "yes" ]]; then
-    echo "Aborted." | tee -a "$LOG_FILE"
-    exit 0
-  fi
-fi
-
-echo
-echo "Cleaning up..." | tee -a "$LOG_FILE"
-
-for vm in "${VMS[@]}"; do
-  echo "Removing VM: $vm" | tee -a "$LOG_FILE"
-
-  # Stop VM if running
-  if VBoxManage list runningvms | grep -q "\"$vm\""; then
-    echo "  Stopping VM..." | tee -a "$LOG_FILE"
-    VBoxManage controlvm "$vm" poweroff 2>&1 | tee -a "$LOG_FILE" || true
+    log_warn "will DELETE: ${existing[*]}"
+    confirm "Destroy these VMs and their disks?" || { log_info "aborted"; exit 0; }
+    for name in "${existing[@]}"; do
+        vbox_vm_running "$name" && VBoxManage controlvm "$name" poweroff >/dev/null 2>&1 || true
+    done
     sleep 2
-  fi
+    for name in "${existing[@]}"; do
+        VBoxManage unregistervm "$name" --delete >/dev/null && log_ok "deleted $name"
+    done
+fi
 
-  # Unregister VM and delete files
-  if VBoxManage list vms | grep -q "\"$vm\""; then
-    echo "  Unregistering and deleting VM..." | tee -a "$LOG_FILE"
-    VBoxManage unregistervm "$vm" --delete 2>&1 | tee -a "$LOG_FILE"
-  fi
+if [ "$DROP_BUILD" = true ] && [ -d "$LAB_BUILD_DIR" ]; then
+    rm -rf "$LAB_BUILD_DIR"
+    log_ok "removed $LAB_BUILD_DIR"
+fi
 
-  echo -e "${GREEN}✓ Removed: $vm${NC}" | tee -a "$LOG_FILE"
-done
-
-echo
-echo -e "${GREEN}✓ Cleanup complete${NC}" | tee -a "$LOG_FILE"
+log_info ""
+log_ok "cleanup complete"
