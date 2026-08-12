@@ -120,6 +120,13 @@ movement across many hosts. Browse all at
 | [**Cybernetics**](https://app.hackthebox.com/prolabs/overview/Cybernetics) | Large, hardened AD enterprise network. |
 | [**APTLabs**](https://app.hackthebox.com/prolabs/overview/APTLabs) | Red-team style, red-forest / advanced AD. |
 
+**Beyond HTB:** [**VulnLab**](https://www.vulnlab.com) (by *xct*) is an
+AD-focused alternative — single boxes plus multi-host **Chains** that play like
+Pro Labs. **TryHackMe** networks (*Wreath*, *Holo*, *Throwback*) and its
+**Compromising Active Directory** module cover the same ground with a large free
+tier. See [`CTF-Links.md`](./CTF-Links.md) and
+[`FREE-AD-SMB-Practice.md`](./FREE-AD-SMB-Practice.md).
+
 ---
 
 ## 6. HTB Academy modules that teach this vector

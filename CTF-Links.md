@@ -16,13 +16,44 @@ A curated link directory for hands-on practice. **🆓 = has a free tier**,
 |----------|-------|------|
 | **Hack The Box** 🎯 | Machines, Pro Labs, Starting Point. Retired boxes need VIP. | https://app.hackthebox.com |
 | **HTB Academy** 🆓🎯 | Structured modules; some free, paths use "cubes". | https://academy.hackthebox.com |
-| **TryHackMe** 🆓🎯 | Huge free tier; great AD/SMB rooms (Attacktive Directory, Kenobi, Network Services). | https://tryhackme.com |
+| **TryHackMe** 🆓🎯 | Huge free tier; great AD/SMB rooms (see the room list below). | https://tryhackme.com |
+| **VulnLab** 🎯 | Realistic **Active Directory** labs — standalone boxes + multi-host "Chains" (red-team style). Paid subscription; one of the strongest AD-focused platforms. | https://www.vulnlab.com |
 | **VulnHub** 🆓🎯 | Free downloadable vulnerable VMs — run locally. | https://www.vulnhub.com |
 | **OffSec Proving Grounds** 🆓 | *Play* tier is free (community VMs); *Practice* is paid. | https://www.offsec.com/labs/ |
 | **PentesterLab** 🆓 | Web-focused exercises; some free. | https://pentesterlab.com |
 | **PortSwigger Web Security Academy** 🆓 | Best free web-hacking labs (SQLi, SSRF, auth…). | https://portswigger.net/web-security |
 | **pwn.college** 🆓 | Free university-grade binary exploitation / systems security. | https://pwn.college |
 | **Hacker101 CTF** 🆓 | Free CTF by HackerOne, feeds bug-bounty skills. | https://ctf.hacker101.com |
+
+### TryHackMe — key AD / SMB rooms 🎯
+
+**Free rooms** (great starting point, no subscription):
+
+| Room | Focus | Link |
+|------|-------|------|
+| **Attacktive Directory** | Full free AD chain: `enum4linux`, `kerbrute`, AS-REP roast, `secretsdump`, `evil-winrm`. | https://tryhackme.com/room/attacktivedirectory |
+| **Network Services** | Dedicated **SMB** enumeration (`enum4linux`, `smbclient`) + Telnet/FTP. | https://tryhackme.com/room/networkservices |
+| **Kenobi** | Samba share enumeration → foothold → privesc. | https://tryhackme.com/room/kenobi |
+| **Post-Exploitation Basics** | Small AD: `mimikatz`, **BloodHound**, `evil-winrm`. | https://tryhackme.com/room/postexploit |
+
+**Compromising Active Directory module** (subscriber path — the full AD story):
+Active Directory Basics → Breaching AD → Enumerating AD → Lateral Movement &
+Pivoting → Exploiting AD → Persisting AD → Credentials Harvesting.
+→ https://tryhackme.com/module/compromising-active-directory  •  also **Attacking
+Kerberos**: https://tryhackme.com/room/attackingkerberos
+
+### VulnLab — realistic AD labs & chains 🎯
+
+[**VulnLab**](https://www.vulnlab.com) (by *xct*) is a paid platform built around
+**Active Directory** and modern enterprise attack paths. Two formats:
+
+- **Boxes** — single machines (Easy → Insane), many Windows/AD with SMB, ADCS,
+  Kerberos, delegation, and relay themes.
+- **Chains** — multi-host networks that mimic a real internal engagement
+  (pivoting, cross-trust, DA → EA) — the closest free-world equivalent to HTB
+  Pro Labs / a real red-team assessment.
+
+It's the natural step up once GOAD and the HTB Easy AD boxes feel comfortable.
 
 ---
 
