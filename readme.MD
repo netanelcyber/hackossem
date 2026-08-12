@@ -15,6 +15,7 @@ implement with Samba.
 | File | What it is |
 |------|-----------|
 | **[`HTB-AD-Samba-Vector.md`](./HTB-AD-Samba-Vector.md)** | The main field guide — a six-phase methodology (discover → enumerate → get creds → escalate → DCSync), Samba CVE notes, a machine-by-machine map, blue-team detections, and a copy-paste cheat sheet. |
+| **[`HTB-CTF-List.md`](./HTB-CTF-List.md)** | A curated list of HTB machines and Pro Labs for practicing the AD/Samba-SMB vector, grouped by attack surface and difficulty, with a suggested progression. |
 | **[`smb_ad_enum.sh`](./smb_ad_enum.sh)** | A companion Bash helper that runs the unauthenticated SMB recon workflow (Phases 1–3) in one shot and saves all output per target. |
 | `app.py` | An unrelated Flask/LINQ/WASM demo kept from earlier work; not part of the HTB material. |
 
