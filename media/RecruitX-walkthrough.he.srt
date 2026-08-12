@@ -1,0 +1,52 @@
+1
+00:00:00,000 --> 00:00:12,292
+TryHackMe: Guided Pentest Web — יעד RecruitX v2.4
+Nmap: 22/SSH · 80/HTTP (Apache 2.4.58) · 3306/MySQL · 8080
+
+2
+00:00:12,342 --> 00:00:18,820
+הרשמה והתחברות ל-RecruitX, ואז בדיקת ה-HTTP response headers
+
+3
+00:00:18,870 --> 00:00:26,891
+Gobuster לסריקת תיקיות →
+/admin · /api · /profile.php · /reset.php · /uploads
+
+4
+00:00:26,941 --> 00:00:35,472
+ה-endpoint ‏/api חושף נתיבים פנימיים (information disclosure)
+Apache 2.4.58 · MySQL
+
+5
+00:00:35,522 --> 00:00:43,895
+IDOR: profile.php?id=1 חושף את האדמין — Sarah Mitchell
+
+6
+00:00:43,945 --> 00:00:52,710
+מעבר על פרמטר ה-id → אנומרציה של כל המשתמשים
+מייל האדמין: s.mitchell@recruitx.thm
+
+7
+00:00:52,760 --> 00:01:01,395
+הפרופיל שלך הוא id=6. אין בקרת גישה על ה-id →
+כל ערך מחזיר נתונים של משתמש אחר
+
+8
+00:01:01,445 --> 00:01:10,394
+Weak password reset: טוקן מספרי קצר → brute force
+איפוס סיסמת האדמין והתחברות
+
+9
+00:01:10,444 --> 00:01:19,284
+פאנל אדמין עם העלאת קבצים — הסינון client-side בלבד
+מסירים את מאפיין ה-accept כדי לעקוף
+
+10
+00:01:19,334 --> 00:01:29,030
+השרת חוסם ‏.txt אבל מאפשר ‏.phtml
+מטפל: upload.php → קבצים ב-/uploads/documents/
+
+11
+00:01:29,080 --> 00:01:41,016
+test.phtml רץ → "PHP is executing" = RCE מאושר
+השלב הבא: reverse shell

@@ -8,9 +8,14 @@ targeting the **RecruitX v2.4** web app. It was rebuilt from 579 extracted video
 frames, with an **English text-to-speech voiceover** and matching **burned-in
 English subtitles**, synced step by step.
 
-- `RecruitX-walkthrough.en.srt` — the subtitle track as a separate soft-sub file.
+- `RecruitX-walkthrough.en.srt` — the English subtitle track (soft subs).
+- `RecruitX-walkthrough.he.mp4` — **Hebrew** version: Hebrew TTS voiceover
+  (`espeak-ng -v he`) + burned-in Hebrew (RTL) subtitles.
+- `RecruitX-walkthrough.he.srt` — the Hebrew subtitle track (soft subs).
 - `build_subtitled_video.py` — the script that regenerates the video from frames
-  (needs `ffmpeg` + `espeak-ng`; see the header for usage).
+  (needs `ffmpeg` + `espeak-ng`; see the header for usage). For the Hebrew build,
+  swap the caption/narration text, use `espeak-ng -v he`, and a Hebrew-capable
+  font (e.g. `FontName=DejaVu Sans`).
 
 > [!NOTE]
 > The voiceover is generated **offline with espeak-ng** (robotic, no network) from
