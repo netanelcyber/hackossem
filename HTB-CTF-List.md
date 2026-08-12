@@ -15,6 +15,13 @@ you can pick a target that drills the exact skill you want.
 > time — treat the "Difficulty" column as a guide and confirm current status on
 > the platform. "Primary vector" is the headline technique, not the full chain.
 
+> [!WARNING]
+> **Most machines below are retired, and retired HTB boxes require a paid VIP /
+> VIP+ subscription.** Free-tier users only get the current *active* machines and
+> Starting Point. Want to practice the exact same skills for **free, no VIP**?
+> See **[`FREE-AD-SMB-Practice.md`](./FREE-AD-SMB-Practice.md)** — self-hosted AD
+> labs, the free Samba-CVE target, and free TryHackMe rooms.
+
 ---
 
 ## How HTB content is organized
