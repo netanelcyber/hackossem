@@ -10,10 +10,10 @@ you can pick a target that drills the exact skill you want.
 > are explicitly permitted to test.
 
 > [!NOTE]
-> Difficulty ratings and active/retired status change over time on the platform.
-> Treat the "Difficulty" column as a guide and confirm current status on
-> [app.hackthebox.com](https://app.hackthebox.com). "Primary vector" is the
-> headline technique, not the full chain.
+> **Links** point to the official HTB pages (`app.hackthebox.com`) and require an
+> HTB account to open. Difficulty ratings and active/retired status change over
+> time — treat the "Difficulty" column as a guide and confirm current status on
+> the platform. "Primary vector" is the headline technique, not the full chain.
 
 ---
 
@@ -39,13 +39,13 @@ Best starting points; the SMB/Samba workflow lands cleanly here.
 
 | Machine | OS | Primary vector |
 |---------|----|----------------|
-| **Active** | Windows | Anonymous SMB `Replication` share → SYSVOL GPP `Groups.xml` → `gpp-decrypt` → Kerberoast → DA. **The canonical SMB box.** |
-| **Forest** | Windows | RID/LDAP user enum → AS-REP roast → BloodHound ACL (`WriteDacl`) → DCSync. |
-| **Sauna** | Windows | User list → AS-REP roast → autologon creds → DCSync. |
-| **Return** | Windows | SMB/LDAP enum → network-printer creds → `Server Operators` → SYSTEM. |
-| **Support** | Windows | Info leak in a shared `.exe` → LDAP creds → RBCD (Resource-Based Constrained Delegation). |
-| **Timelapse** | Windows | SMB share → password-protected PFX cert → WinRM → LAPS read. |
-| **Cicada** | Windows | SMB null/guest → password in a share → user enum → backup privilege. |
+| [**Active**](https://app.hackthebox.com/machines/Active) | Windows | Anonymous SMB `Replication` share → SYSVOL GPP `Groups.xml` → `gpp-decrypt` → Kerberoast → DA. **The canonical SMB box.** |
+| [**Forest**](https://app.hackthebox.com/machines/Forest) | Windows | RID/LDAP user enum → AS-REP roast → BloodHound ACL (`WriteDacl`) → DCSync. |
+| [**Sauna**](https://app.hackthebox.com/machines/Sauna) | Windows | User list → AS-REP roast → autologon creds → DCSync. |
+| [**Return**](https://app.hackthebox.com/machines/Return) | Windows | SMB/LDAP enum → network-printer creds → `Server Operators` → SYSTEM. |
+| [**Support**](https://app.hackthebox.com/machines/Support) | Windows | Info leak in a shared `.exe` → LDAP creds → RBCD (Resource-Based Constrained Delegation). |
+| [**Timelapse**](https://app.hackthebox.com/machines/Timelapse) | Windows | SMB share → password-protected PFX cert → WinRM → LAPS read. |
+| [**Cicada**](https://app.hackthebox.com/machines/Cicada) | Windows | SMB null/guest → password in a share → user enum → backup privilege. |
 
 ---
 
@@ -53,17 +53,17 @@ Best starting points; the SMB/Samba workflow lands cleanly here.
 
 | Machine | OS | Primary vector |
 |---------|----|----------------|
-| **Cascade** | Windows | SMB/LDAP enum → config + deleted-object creds → recover DA. |
-| **Monteverde** | Windows | SMB user enum → password reuse → **Azure AD Connect** DB creds → DA. |
-| **Resolute** | Windows | LDAP enum → password in description → `DnsAdmins` DLL injection. |
-| **Fuse** | Windows | Print job usernames → password spray → `SeLoadDriverPrivilege`. |
-| **Intelligence** | Windows | Doc metadata → password spray → **gMSA** read → RBCD. |
-| **Search** | Windows | LDAP + Kerberoast → **gMSA** → certificate abuse. |
-| **Escape** | Windows | MSSQL coerced auth → **AD CS ESC1** certificate template abuse. |
-| **Certified** | Windows | Shadow credentials → **AD CS ESC9** → DA. |
-| **Manager** | Windows | MSSQL → SMB backup → **AD CS ESC7** (Manage CA). |
-| **Scrambled** | Windows | NTLM disabled → Kerberos-only → silver ticket → MSSQL. |
-| **Jab** | Windows | XMPP directory enum → AS-REP roast → DCSync path. |
+| [**Cascade**](https://app.hackthebox.com/machines/Cascade) | Windows | SMB/LDAP enum → config + deleted-object creds → recover DA. |
+| [**Monteverde**](https://app.hackthebox.com/machines/Monteverde) | Windows | SMB user enum → password reuse → **Azure AD Connect** DB creds → DA. |
+| [**Resolute**](https://app.hackthebox.com/machines/Resolute) | Windows | LDAP enum → password in description → `DnsAdmins` DLL injection. |
+| [**Fuse**](https://app.hackthebox.com/machines/Fuse) | Windows | Print job usernames → password spray → `SeLoadDriverPrivilege`. |
+| [**Intelligence**](https://app.hackthebox.com/machines/Intelligence) | Windows | Doc metadata → password spray → **gMSA** read → RBCD. |
+| [**Search**](https://app.hackthebox.com/machines/Search) | Windows | LDAP + Kerberoast → **gMSA** → certificate abuse. |
+| [**Escape**](https://app.hackthebox.com/machines/Escape) | Windows | MSSQL coerced auth → **AD CS ESC1** certificate template abuse. |
+| [**Certified**](https://app.hackthebox.com/machines/Certified) | Windows | Shadow credentials → **AD CS ESC9** → DA. |
+| [**Manager**](https://app.hackthebox.com/machines/Manager) | Windows | MSSQL → SMB backup → **AD CS ESC7** (Manage CA). |
+| [**Scrambled**](https://app.hackthebox.com/machines/Scrambled) | Windows | NTLM disabled → Kerberos-only → silver ticket → MSSQL. |
+| [**Jab**](https://app.hackthebox.com/machines/Jab) | Windows | XMPP directory enum → AS-REP roast → DCSync path. |
 
 ---
 
@@ -71,14 +71,14 @@ Best starting points; the SMB/Samba workflow lands cleanly here.
 
 | Machine | OS | Difficulty | Primary vector |
 |---------|----|-----------|----------------|
-| **Blackfield** | Windows | Hard | Anonymous SMB share → RID brute → AS-REP roast → `SeBackupPrivilege` → NTDS. |
-| **Sizzle** | Windows | Hard | SMB writable share → **SCF file** NetNTLM capture → certificate auth. |
-| **Object** | Windows | Hard | Jenkins → AD creds → ACL abuse (`ForceChangePassword`/`GenericWrite`). |
-| **Reel** | Windows | Hard | Phishing (RTF) → AD enum → ACL path. |
-| **Mantis** | Windows | Hard | MSSQL + Kerberos (MS14-068 era) → DA. |
-| **APT** | Windows | Insane | IPv6 + RPC → NTLM relay → NTDS. |
-| **Multimaster** | Windows | Insane | SQLi → user enum → AS-REP → certificate/AV evasion chain. |
-| **Absolute** | Windows | Insane | IPv6 DNS → Kerberos-only → shadow creds → KrbRelay. |
+| [**Blackfield**](https://app.hackthebox.com/machines/Blackfield) | Windows | Hard | Anonymous SMB share → RID brute → AS-REP roast → `SeBackupPrivilege` → NTDS. |
+| [**Sizzle**](https://app.hackthebox.com/machines/Sizzle) | Windows | Hard | SMB writable share → **SCF file** NetNTLM capture → certificate auth. |
+| [**Object**](https://app.hackthebox.com/machines/Object) | Windows | Hard | Jenkins → AD creds → ACL abuse (`ForceChangePassword`/`GenericWrite`). |
+| [**Reel**](https://app.hackthebox.com/machines/Reel) | Windows | Hard | Phishing (RTF) → AD enum → ACL path. |
+| [**Mantis**](https://app.hackthebox.com/machines/Mantis) | Windows | Hard | MSSQL + Kerberos (MS14-068 era) → DA. |
+| [**APT**](https://app.hackthebox.com/machines/APT) | Windows | Insane | IPv6 + RPC → NTLM relay → NTDS. |
+| [**Multimaster**](https://app.hackthebox.com/machines/Multimaster) | Windows | Insane | SQLi → user enum → AS-REP → certificate/AV evasion chain. |
+| [**Absolute**](https://app.hackthebox.com/machines/Absolute) | Windows | Insane | IPv6 DNS → Kerberos-only → shadow creds → KrbRelay. |
 
 ---
 
@@ -89,32 +89,36 @@ than AD.
 
 | Machine | OS | Primary vector |
 |---------|----|----------------|
-| **Lame** | Linux | **CVE-2007-2447** `usermap_script` command injection → root. The purest Samba-RCE box. |
-| **Jerry / others** | Linux | (SMB often used for enum/loot even when foothold is elsewhere — always check `445`.) |
+| [**Lame**](https://app.hackthebox.com/machines/Lame) | Linux | **CVE-2007-2447** `usermap_script` command injection → root. The purest Samba-RCE box. |
 
 > On any Linux box, fingerprint the Samba version (`smbclient -L`, nmap
 > `smb-os-discovery`) against §10 of the main guide (CVE-2007-2447,
-> CVE-2017-7494 SambaCry, CVE-2021-44142 `vfs_fruit`).
+> CVE-2017-7494 SambaCry, CVE-2021-44142 `vfs_fruit`). Even when the foothold is
+> elsewhere, always enumerate `445` for loot.
 
 ---
 
 ## 5. AD-heavy Pro Labs (multi-machine networks)
 
-Closest to a real internal AD pentest — SMB enumeration, relaying, and
-lateral movement across many hosts.
+Closest to a real internal AD pentest — SMB enumeration, relaying, and lateral
+movement across many hosts. Browse all at
+[app.hackthebox.com/prolabs](https://app.hackthebox.com/prolabs).
 
 | Pro Lab | Focus |
 |---------|-------|
-| **Dante** | Beginner-friendly network pivoting; mixed Linux/Windows. |
-| **Zephyr** | Intermediate AD-focused enterprise network. |
-| **Offshore** | Classic Windows AD enterprise lab — the AD/SMB workhorse. |
-| **RastaLabs** | AD with an emphasis on persistence and evasion. |
-| **Cybernetics** | Large, hardened AD enterprise network. |
-| **APTLabs** | Red-team style, red-forest / advanced AD. |
+| [**Dante**](https://app.hackthebox.com/prolabs/overview/Dante) | Beginner-friendly network pivoting; mixed Linux/Windows. |
+| [**Zephyr**](https://app.hackthebox.com/prolabs/overview/Zephyr) | Intermediate AD-focused enterprise network. |
+| [**Offshore**](https://app.hackthebox.com/prolabs/overview/Offshore) | Classic Windows AD enterprise lab — the AD/SMB workhorse. |
+| [**RastaLabs**](https://app.hackthebox.com/prolabs/overview/RastaLabs) | AD with an emphasis on persistence and evasion. |
+| [**Cybernetics**](https://app.hackthebox.com/prolabs/overview/Cybernetics) | Large, hardened AD enterprise network. |
+| [**APTLabs**](https://app.hackthebox.com/prolabs/overview/APTLabs) | Red-team style, red-forest / advanced AD. |
 
 ---
 
 ## 6. HTB Academy modules that teach this vector
+
+Browse the catalog at
+[academy.hackthebox.com/catalogue](https://academy.hackthebox.com/catalogue).
 
 | Module | Why |
 |--------|-----|
@@ -134,12 +138,12 @@ Samba RCE        Active   ->  GPP/SMB        ->  Roasting + BloodHound  ->  Full
                                                                             -> Pro Lab: Dante -> Offshore
 ```
 
-1. **Lame** — see the Samba service itself exploited (CVE-2007-2447).
-2. **Active** — the textbook SMB→GPP→Kerberoast chain.
-3. **Forest / Sauna** — AS-REP roasting + BloodHound ACL paths + DCSync.
-4. **Return / Support / Timelapse** — varied Easy AD footholds over SMB/LDAP.
-5. **Blackfield / Cascade** — full, multi-step chains.
-6. **Pro Labs** (Dante → Offshore) — apply it across a real network.
+1. [**Lame**](https://app.hackthebox.com/machines/Lame) — see the Samba service itself exploited (CVE-2007-2447).
+2. [**Active**](https://app.hackthebox.com/machines/Active) — the textbook SMB→GPP→Kerberoast chain.
+3. [**Forest**](https://app.hackthebox.com/machines/Forest) / [**Sauna**](https://app.hackthebox.com/machines/Sauna) — AS-REP roasting + BloodHound ACL paths + DCSync.
+4. [**Return**](https://app.hackthebox.com/machines/Return) / [**Support**](https://app.hackthebox.com/machines/Support) / [**Timelapse**](https://app.hackthebox.com/machines/Timelapse) — varied Easy AD footholds over SMB/LDAP.
+5. [**Blackfield**](https://app.hackthebox.com/machines/Blackfield) / [**Cascade**](https://app.hackthebox.com/machines/Cascade) — full, multi-step chains.
+6. **Pro Labs** ([Dante](https://app.hackthebox.com/prolabs/overview/Dante) → [Offshore](https://app.hackthebox.com/prolabs/overview/Offshore)) — apply it across a real network.
 
 ---
 
