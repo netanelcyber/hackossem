@@ -57,6 +57,36 @@ It's the natural step up once GOAD and the HTB Easy AD boxes feel comfortable.
 
 ---
 
+## 1b. Alternatives to TryHackMe
+
+TryHackMe's niche is **guided, gamified, browser-based learning paths** for
+beginners → intermediate. These are the closest alternatives, grouped by what
+they replace it *for*:
+
+| Platform | Best alternative for | Free tier | Link |
+|----------|---------------------|-----------|------|
+| **HTB Academy** 🎯 | The #1 direct match — structured guided modules + a skill path and cert (CPTS). | Partial (some free modules) | https://academy.hackthebox.com |
+| **Hack The Box** 🎯 | The gamified hands-on side (machines, Pro Labs, Sherlocks). | Active machines + Starting Point | https://app.hackthebox.com |
+| **TCM Security Academy** | Budget-friendly video courses + labs (PEH course, PNPT cert). | Some free content | https://academy.tcm-sec.com |
+| **INE / eLearnSecurity** | Cert-driven learning paths (eJPT, eCPPT). | Trial/some free | https://ine.com |
+| **OffSec (Proving Grounds + Learn)** | Harder, practical, OSCP prep. | PG **Play** is free | https://www.offsec.com/labs/ |
+| **PentesterLab** | Focused web/appsec exercises. | Some free | https://pentesterlab.com |
+| **PortSwigger Web Security Academy** 🆓 | Best **free** web-hacking labs (SQLi, SSRF, auth…). | Fully free | https://portswigger.net/web-security |
+| **VulnLab** 🎯 | Realistic **Active Directory** boxes + Chains. | Paid | https://www.vulnlab.com |
+| **Hacker101** 🆓 | Free CTF + videos, bug-bounty leaning. | Fully free | https://ctf.hacker101.com |
+| **Blue Team: LetsDefend / CyberDefenders / BTLO** | The defensive/SOC/DFIR side of THM. | Free tiers | https://cyberdefenders.org |
+
+**Which to pick:**
+- **Closest single swap:** **HTB Academy** — same guided, path-based style, with a
+  recognized cert (CPTS) at the end.
+- **Cheapest structured course path:** **TCM Security** (great value, PNPT).
+- **Best 100% free combo:** **PortSwigger** (web) + **picoCTF / OverTheWire /
+  Root-Me** (fundamentals, §2) + **VulnHub / GOAD** (offline labs, §4).
+- **For the AD/Samba focus of this repo:** **HTB + VulnLab**, backed by your own
+  **GOAD** lab — see [`FREE-AD-SMB-Practice.md`](./FREE-AD-SMB-Practice.md).
+
+---
+
 ## 2. Beginner-friendly wargames & jeopardy CTFs (all 🆓)
 
 | Site | Focus | Link |
