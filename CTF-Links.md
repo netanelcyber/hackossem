@@ -137,6 +137,16 @@ Build a Domain Controller you own and attack it legally, unlimited.
 
 ---
 
+## 8. Video walkthroughs & demos
+
+| Source | Topic | Link |
+|--------|-------|------|
+| **Netanel Stern — LinkedIn** | Web pentesting demo (TryHackMe / `#webpentesting #THM`). | https://lnkd.in/p/d3p4-dRn |
+
+> Opening the LinkedIn post requires being signed in to LinkedIn.
+
+---
+
 ## Free "no-VIP" starter path 🆓🎯
 
 1. **Metasploitable 2** — Samba `usermap_script` (the free `Lame`).
