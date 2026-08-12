@@ -142,6 +142,7 @@ Build a Domain Controller you own and attack it legally, unlimited.
 | Source | Topic | Link |
 |--------|-------|------|
 | **Netanel Stern — LinkedIn** | Web pentesting demo (TryHackMe / `#webpentesting #THM`). | https://lnkd.in/p/d3p4-dRn |
+| **RecruitX walkthrough (this repo)** | Subtitled recap of TryHackMe "Guided Pentest Web" (IDOR → weak reset → upload RCE). | [`media/`](./media/) |
 
 > Opening the LinkedIn post requires being signed in to LinkedIn.
 

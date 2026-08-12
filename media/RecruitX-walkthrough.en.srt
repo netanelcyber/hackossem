@@ -1,0 +1,52 @@
+1
+00:00:00,000 --> 00:00:19,165
+TryHackMe: Guided Pentest Web — target RecruitX v2.4.
+Nmap: 22/SSH, 80/HTTP (Apache 2.4.58), 3306/MySQL, 8080.
+
+2
+00:00:19,215 --> 00:00:27,331
+Register + log in to RecruitX, then inspect the HTTP response headers.
+
+3
+00:00:27,381 --> 00:00:38,322
+Gobuster directory brute force →
+/admin, /api, /profile.php, /reset.php, /uploads ...
+
+4
+00:00:38,372 --> 00:00:49,124
+The /api endpoint leaks internal routes (info disclosure).
+Apache 2.4.58, MySQL backend.
+
+5
+00:00:49,174 --> 00:00:58,354
+IDOR: profile.php?id=1 reveals the admin — Sarah Mitchell.
+
+6
+00:00:58,404 --> 00:01:09,127
+Iterate the id → enumerate every user.
+Admin email: s.mitchell@recruitx.thm
+
+7
+00:01:09,177 --> 00:01:18,859
+Your profile is id=6. No access control on the numeric id →
+any value returns another user's data.
+
+8
+00:01:18,909 --> 00:01:29,004
+Weak password reset: short numeric token → brute force.
+Reset the admin's password and log in.
+
+9
+00:01:29,054 --> 00:01:38,564
+Admin panel upload — filter is client-side only.
+Remove the 'accept' attribute to bypass.
+
+10
+00:01:38,614 --> 00:01:50,153
+Server blocks .txt but allows .phtml.
+Handler: upload.php → files in /uploads/documents/
+
+11
+00:01:50,203 --> 00:02:03,938
+test.phtml runs → "PHP is executing" = RCE confirmed.
+Next: reverse shell.
