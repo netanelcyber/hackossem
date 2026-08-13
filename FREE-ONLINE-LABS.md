@@ -68,6 +68,45 @@ Everything here needs at most a free account.
 | **KC7** | Free threat-intel / detection game. | 🔑🌐 | https://kc7cyber.com |
 | **HTB Sherlocks** | HTB's DFIR track (some free). | 🔑🌐 | https://app.hackthebox.com/sherlocks |
 
+## OSINT (all online, free)
+
+| Platform | Notes | Access | Link |
+|----------|-------|--------|------|
+| **OSINT Dojo — Sakura Room** | Guided beginner OSINT investigation (hosted on TryHackMe). | 🔑🌐 | https://tryhackme.com/room/sakura |
+| **TryHackMe OSINT rooms** | Free rooms: *OhSINT*, *Google Dorking*, *Shodan*. | 🔑🌐 | https://tryhackme.com/room/ohsint |
+| **Gralhix OSINT exercises** | 100+ free step-by-step OSINT exercises with solutions. | 🌐 | https://gralhix.com/list-of-osint-exercises/ |
+| **Trace Labs Search Party** | Free crowdsourced OSINT CTFs (missing persons). | 🔑🌐 | https://www.tracelabs.org |
+| **GeoGuessr** | Geolocation practice (free daily challenge). | 🔑🌐 | https://www.geoguessr.com |
+
+## Mobile (Android/iOS)
+
+> [!NOTE]
+> True mobile pentest usually needs a local emulator, so purely **online** free
+> options are limited — for hands-on app testing, self-host the classic targets
+> (OWASP MASTG crackmes, DIVA, InsecureBankv2). These are the online-friendly ones:
+
+| Platform | Notes | Access | Link |
+|----------|-------|--------|------|
+| **TryHackMe mobile rooms** | Free intro rooms (Android basics, APK analysis). | 🔑🌐 | https://tryhackme.com |
+| **Root-Me — Cracking/APK** | Hosted Android/APK reversing challenges. | 🔑🌐 | https://www.root-me.org |
+
+## Hardware / Embedded / IoT
+
+> [!NOTE]
+> Most hardware CTFs need physical kit; these run **fully online** in the browser:
+
+| Platform | Notes | Access | Link |
+|----------|-------|--------|------|
+| **microcorruption** | Emulated MSP430 firmware exploitation CTF — no hardware. | 🌐 | https://microcorruption.com |
+| **Root-Me — reverse/hardware** | Some hosted low-level/RE challenges. | 🔑🌐 | https://www.root-me.org |
+
+## AI / LLM security (prompt injection)
+
+| Platform | Notes | Access | Link |
+|----------|-------|--------|------|
+| **Gandalf (Lakera)** | Free browser prompt-injection game — trick the LLM into leaking a password. | 🌐 | https://gandalf.lakera.ai |
+| **PortSwigger — Web LLM attacks** | Free labs on attacking LLM-backed web apps. | 🌐 | https://portswigger.net/web-security/llm-attacks |
+
 ---
 
 ## Where to start (100% free, online)
