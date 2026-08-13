@@ -1,106 +1,62 @@
-Here is a professional and stylish `README.md` for the single-file solution we just built. It highlights the "Magic" architecture and the LINQ integration.
+# hackossem — HTB Active Directory: The Samba / SMB Vector
 
----
+Educational security notes and tooling for practicing **Active Directory
+attacks on Hack The Box** through the **SMB (Samba)** surface — the protocol on
+ports `139/445` that every Domain Controller exposes and that Linux HTB targets
+implement with Samba.
 
-# ✨ Magic LINQ: Python & AngularJS
+> [!IMPORTANT]
+> **Authorized labs only.** This material is for Hack The Box, other CTF
+> platforms, and systems you are explicitly permitted to test. Using it against
+> anything you do not own or have written permission to assess is illegal.
 
-A streamlined, single-file web application demonstrating **LINQ-style Query Injection** in Python, served to a classic **AngularJS** frontend via **Dependency Injection**.
+## Contents
 
-This project bridges the gap between declarative C#-style querying and Python's dynamic nature, wrapped in a lightweight Flask server.
+| File | What it is |
+|------|-----------|
+| **[`HTB-AD-Samba-Vector.md`](./HTB-AD-Samba-Vector.md)** | The main field guide — a six-phase methodology (discover → enumerate → get creds → escalate → DCSync), Samba CVE notes, a machine-by-machine map, blue-team detections, and a copy-paste cheat sheet. |
+| **[`HTB-AD-Samba-Vector.he.md`](./HTB-AD-Samba-Vector.he.md)** | 🇮🇱 Hebrew (RTL) edition of the methodology guide — same six phases and commands, in Hebrew. |
+| **[`smb_ad_dashboard.py`](./smb_ad_dashboard.py)** | 🇮🇱 A single-file Flask app: an interactive **Hebrew (RTL)** checklist dashboard of the six-phase SMB/AD methodology, with copy-to-clipboard commands and saved progress. |
+| **[`HTB-CTF-List.md`](./HTB-CTF-List.md)** | A curated list of HTB machines and Pro Labs for practicing the AD/Samba-SMB vector, grouped by attack surface and difficulty, with direct lab links and a suggested progression. |
+| **[`FREE-AD-SMB-Practice.md`](./FREE-AD-SMB-Practice.md)** | The **free / no-VIP** path — self-hosted AD labs (GOAD, vulnerable-AD), the free Samba-CVE target (Metasploitable 2 = the same bug as `Lame`), and free TryHackMe rooms. |
+| **[`FREE-ONLINE-LABS.md`](./FREE-ONLINE-LABS.md)** | **Free, online-only** labs (hosted — no download, no payment): web, wargames, pwn/RE/crypto/cloud, and blue-team, with access notes. |
+| **[`CTF-Links.md`](./CTF-Links.md)** | A link directory of CTF & practice platforms, self-hosted AD/SMB labs, core tools, and learning resources — free tiers and AD/SMB-relevant entries marked. |
+| **[`media/`](./media/)** | A subtitled walkthrough video of the TryHackMe "Guided Pentest Web" (RecruitX v2.4) room — rebuilt from frames with an English voiceover + burned-in subtitles, plus the SRT and build script. |
+| **[`smb_ad_enum.sh`](./smb_ad_enum.sh)** | A companion Bash helper that runs the unauthenticated SMB recon workflow (Phases 1–3) in one shot and saves all output per target. |
+| `app.py` | An unrelated Flask/LINQ/WASM demo kept from earlier work; not part of the HTB material. |
 
-## 🚀 Features
+## Quick start
 
-* **🐍 Python Magic Query Engine**: A custom, fluent-interface class that mimics C# LINQ (`.where()`, `.select()`, `.order_by()`) to process data in memory.
-* **🅰️ AngularJS Dependency Injection**: Frontend architecture utilizing Angular Services to "inject" API queries into controllers cleanly.
-* **⚡ Single-File Architecture**: The entire stack (Backend, Frontend, HTML, Database Mock) lives in one executable `app.py`.
-* **🔌 RESTful API**: A JSON endpoint that accepts filter payloads and executes dynamic LINQ chains.
+Read the guide first, then run the enumerator against a lab target:
 
-## 📋 Prerequisites
-
-* **Python 3.7+**
-* **Flask**
-
-## 🛠️ Installation & Usage
-
-1. **Clone or Create the File**
-Save the provided code as `app.py`.
-2. **Install Dependencies**
 ```bash
-pip install flask
+# Anonymous / null-session recon
+./smb_ad_enum.sh 10.10.10.100
 
+# With a domain (Kerberos-aware) and/or a credential you have obtained
+./smb_ad_enum.sh 10.10.10.100 active.htb
+./smb_ad_enum.sh 10.10.10.100 htb.local svc-user 'P@ssw0rd'
 ```
 
+All artifacts land in an `enum_<ip>/` folder for note-taking. The script skips —
+rather than fails on — any tool that is not installed and tells you how to get it.
 
-3. **Run the Magic Server**
-```bash
-python app.py
+## The vector in one paragraph
 
-```
+SMB is the front door to AD: it leaks the domain, users, groups, and password
+policy over null sessions; SYSVOL routinely hands out passwords (the classic
+GPP `Groups.xml` → `gpp-decrypt`); and once you hold any credential or NTLM hash
+it becomes the channel for Kerberoasting, BloodHound collection, pass-the-hash,
+`psexec`/`wmiexec`, and ultimately DCSync to Domain Admin. On Linux boxes the
+same service is *Samba itself*, which adds direct RCE bugs like CVE-2007-2447
+(`usermap_script`, the `Lame` box) and CVE-2017-7494 (SambaCry). The guide walks
+each phase with real commands and maps them to specific HTB machines.
 
+## Recommended HTB progression
 
-4. **View the App**
-Open your browser and navigate to:
-`http://localhost:5000`
+`Lame` (pure Samba RCE) → `Active` (GPP over SMB) → `Forest` / `Sauna`
+(AS-REP roasting + BloodHound) → `Blackfield` / `Cascade` (full chains).
 
-## 🧠 Under the Hood
+## License
 
-### 1. The Python "Magic" (LINQ Style)
-
-Instead of writing list comprehensions or raw loops, we use a fluent interface pattern. The `MagicQuery` class allows method chaining:
-
-```python
-# The "Magic" Style
-result = MagicQuery(users) \
-    .where(lambda u: u['score'] > 50) \
-    .where(lambda u: u['role'] == 'Admin') \
-    .order_by(lambda u: u['name']) \
-    .select(lambda u: u['name']) \
-    .to_list()
-
-```
-
-### 2. The AngularJS Injection
-
-We avoid putting HTTP logic directly in the Controller. Instead, we define a Service and **inject** it.
-
-```javascript
-// The Service
-app.service('MagicDataService', ['$http', function($http) {
-    this.query = function(filters) {
-        return $http.post('/api/query', filters);
-    };
-}]);
-
-// The Injection
-app.controller('MainCtrl', ['MagicDataService', function(MagicDataService) {
-    // MagicDataService is now available here!
-}]);
-
-```
-
-## 📂 Project Structure
-
-Since this is a single-file application, the structure is virtual:
-
-```text
-app.py
-├── Imports & Config
-├── Class MagicQuery ( The LINQ Engine )
-├── users_db ( Mock Data )
-├── Flask Routes
-│   └── /api/query ( Logic Layer )
-└── HTML_TEMPLATE ( Embedded AngularJS App )
-
-```
-
-## 🤝 Contributing
-
-Feel free to fork this project and add:
-
-* Real database persistence (SQLAlchemy).
-* More LINQ operators (e.g., `.take()`, `.first_or_default()`, `.group_by()`).
-* Migration to Angular v17+ Signals.
-
-## 📄 License
-
-Distributed under the MIT License. See `LICENSE` for more information.
+Educational content, distributed under the MIT License.
