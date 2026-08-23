@@ -173,6 +173,7 @@ const FETCH_SOURCE = true;          // set false to skip the "Source Code" sheet
 const SOURCE_REPO_LIMIT = 5;        // how many top-starred safe repos to download from
 const SOURCE_FILE_LIMIT = 15;       // max files per repo
 const SOURCE_MAX_BYTES = 60000;     // skip files larger than this
+const REQUEST_DELAY_MS = 1500;      // pause before each HTTP request to avoid GitHub rate limits
 const CELL_CHAR_LIMIT = 32000;      // Excel hard limit is 32767 characters per cell
 
 // Extensions worth pulling as "source".
@@ -616,8 +617,13 @@ function hasSourceExtension(path: string): boolean {
 
 /* ---------------------------------------------------------------- Helpers */
 
+function sleep(ms: number): Promise<void> {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
 async function getJson<T>(url: string, headers: { [key: string]: string }): Promise<T | null> {
   try {
+    await sleep(REQUEST_DELAY_MS);
     const response = await fetch(url, { method: "GET", headers: headers });
     if (!response.ok) {
       console.log("Request failed (" + response.status + "): " + url);
@@ -643,6 +649,7 @@ function githubHeaders(): { [key: string]: string } {
 
 async function getText(url: string): Promise<string | null> {
   try {
+    await sleep(REQUEST_DELAY_MS);
     const response = await fetch(url, { method: "GET" });
     if (!response.ok) {
       console.log("Download failed (" + response.status + "): " + url);
