@@ -51,3 +51,27 @@ your header row. Runs entirely offline — no API call, no key needed.
 The Claude API has no fine-tuning endpoint, so this JSONL is for few-shot
 prompting, eval sets, and prompt-cached example blocks; the Messages shape also
 converts cleanly if you tune a model elsewhere.
+
+## `LocalLLM.ts` — self-contained, no external model
+
+Trains a language model **inside Excel**. No API, no key, no network call, so
+no Automate → Settings permission is needed.
+
+It is an n-gram model with stupid-backoff smoothing: it learns
+`P(next token | previous N-1 tokens)` by counting over the sheet's text, backs
+off to shorter contexts when a context is unseen, and samples with temperature
+and top-k. It reports train and held-out **perplexity** so you can see whether
+it learned or just memorised.
+
+Config highlights: `order` (3 = trigram), `tokenizer` (`"word"` or `"char"`),
+`prompt` to continue a phrase, `seed` for reproducible samples.
+
+What it is not: a transformer. It reproduces the style and vocabulary of your
+sheet and will not reason or follow instructions — that is the cost of running
+with zero dependencies. For reasoning over a sheet, use
+`AskClaudeAboutSheet.ts`.
+
+Verified against a 12-document sample (English + Hebrew): trigram model,
+train perplexity 1.35 / validation 31.76, generating novel recombinations such
+as "The quarterly revenue decreased by four percent in the southern region
+during the second quarter."
