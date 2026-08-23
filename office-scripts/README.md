@@ -37,3 +37,17 @@ envelope or a plain text string back from the proxy.
   the model knows it is seeing a subset rather than silently reasoning over a
   partial sheet.
 - `stop_reason` is checked for `refusal` and `max_tokens`.
+
+## `BuildTrainingData.ts`
+
+Turns labelled worksheet rows into LLM training / few-shot examples: each row
+becomes one Messages-format example (`{ system, messages: [user, assistant] }`)
+emitted as JSONL to a `Training Data` sheet and to the console, with a
+deterministic train/validation split.
+
+Configure `inputColumns`, `outputColumn`, and optionally `systemColumn` to match
+your header row. Runs entirely offline — no API call, no key needed.
+
+The Claude API has no fine-tuning endpoint, so this JSONL is for few-shot
+prompting, eval sets, and prompt-cached example blocks; the Messages shape also
+converts cleanly if you tune a model elsewhere.
