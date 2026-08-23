@@ -180,6 +180,8 @@ const SCAN_MAX_ORDER = 3;           // crawl depth: SCAN_URLS = order 1, README-
 const SCAN_LINKS_PER_REPO = 10;     // max new repos to follow from each repo's README
 const SCAN_TOTAL_LIMIT = 400;       // hard cap on repos visited across the whole crawl
 const CELL_CHAR_LIMIT = 32000;      // Excel hard limit is 32767 characters per cell
+const MAX_RETRIES = 3;              // retries on thrown network errors ("Failed to fetch")
+const RETRY_BACKOFF_MS = 2000;      // base backoff between retries (doubles each attempt)
 
 // Extensions worth pulling as "source".
 const SOURCE_EXTENSIONS = [
@@ -451,8 +453,8 @@ function parseRepoUrl(url: string): string | null {
   if (!match) {
     return null;
   }
-  const owner = match[1];
-  const repo = match[2].replace(/\.git$/i, "");
+  const owner = match[1].trim();
+  const repo = match[2].replace(/\.git$/i, "").replace(/\/+$/, "").trim();
   if (!owner || !repo) {
     return null;
   }
@@ -713,18 +715,30 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function getJson<T>(url: string, headers: { [key: string]: string }): Promise<T | null> {
-  try {
-    await sleep(REQUEST_DELAY_MS);
-    const response = await fetch(url, { method: "GET", headers: headers });
-    if (!response.ok) {
-      console.log("Request failed (" + response.status + "): " + url);
-      return null;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      await sleep(REQUEST_DELAY_MS);
+      const response = await fetch(url, { method: "GET", headers: headers });
+      if (!response.ok) {
+        // HTTP status errors (404/403/…) are not retried — they won't change on a retry.
+        console.log("Request failed (" + response.status + "): " + url);
+        return null;
+      }
+      return (await response.json()) as T;
+    } catch (error) {
+      // Thrown errors ("Failed to fetch") are usually transient — retry with backoff.
+      const last = attempt === MAX_RETRIES;
+      console.log(
+        "Request error for " + url + " (attempt " + (attempt + 1) + "/" + (MAX_RETRIES + 1) +
+        "): " + error + (last ? " — giving up" : " — retrying")
+      );
+      if (last) {
+        return null;
+      }
+      await sleep(RETRY_BACKOFF_MS * Math.pow(2, attempt));
     }
-    return (await response.json()) as T;
-  } catch (error) {
-    console.log("Request error for " + url + ": " + error);
-    return null;
   }
+  return null;
 }
 
 function githubHeaders(): { [key: string]: string } {
@@ -739,18 +753,28 @@ function githubHeaders(): { [key: string]: string } {
 }
 
 async function getText(url: string): Promise<string | null> {
-  try {
-    await sleep(REQUEST_DELAY_MS);
-    const response = await fetch(url, { method: "GET" });
-    if (!response.ok) {
-      console.log("Download failed (" + response.status + "): " + url);
-      return null;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      await sleep(REQUEST_DELAY_MS);
+      const response = await fetch(url, { method: "GET" });
+      if (!response.ok) {
+        console.log("Download failed (" + response.status + "): " + url);
+        return null;
+      }
+      return await response.text();
+    } catch (error) {
+      const last = attempt === MAX_RETRIES;
+      console.log(
+        "Download error for " + url + " (attempt " + (attempt + 1) + "/" + (MAX_RETRIES + 1) +
+        "): " + error + (last ? " — giving up" : " — retrying")
+      );
+      if (last) {
+        return null;
+      }
+      await sleep(RETRY_BACKOFF_MS * Math.pow(2, attempt));
     }
-    return await response.text();
-  } catch (error) {
-    console.log("Download error for " + url + ": " + error);
-    return null;
   }
+  return null;
 }
 
 function truncate(text: string, max: number): string {
