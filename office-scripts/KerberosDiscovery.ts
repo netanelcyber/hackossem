@@ -176,6 +176,9 @@ const SOURCE_REPO_LIMIT = 5;        // how many top-starred safe repos to downlo
 const SOURCE_FILE_LIMIT = 15;       // max files per repo
 const SOURCE_MAX_BYTES = 60000;     // skip files larger than this
 const REQUEST_DELAY_MS = 1500;      // pause before each HTTP request to avoid GitHub rate limits
+const SCAN_MAX_ORDER = 3;           // crawl depth: SCAN_URLS = order 1, README-linked repos = 2, their links = 3
+const SCAN_LINKS_PER_REPO = 10;     // max new repos to follow from each repo's README
+const SCAN_TOTAL_LIMIT = 400;       // hard cap on repos visited across the whole crawl
 const CELL_CHAR_LIMIT = 32000;      // Excel hard limit is 32767 characters per cell
 
 // Extensions worth pulling as "source".
@@ -301,7 +304,7 @@ async function main(workbook: ExcelScript.Workbook): Promise<void> {
   writeTable(
     workbook,
     "URL Scan",
-    ["URL", "Repository", "Safety", "Reason", "Stars", "Language", "Archived", "Last push", "Description"],
+    ["Order", "Found via", "Repository", "Safety", "Reason", "Stars", "Language", "Archived", "Last push", "Description"],
     scan
   );
 
@@ -460,48 +463,134 @@ function parseRepoUrl(url: string): string | null {
  * Fetches each SCAN_URLS repo, classifies it, and — when safe — adds it to the
  * pool that collectSource() downloads from. Returns rows for the "URL Scan" sheet.
  */
+/**
+ * Breadth-first crawl of the repository link graph up to SCAN_MAX_ORDER.
+ *
+ * Order 1 = the SCAN_URLS seeds. For each safe repo, github.com/owner/repo links
+ * found in its README become the next order, and so on. Every visited repo is
+ * classified; safe ones are added to the source-download pool. Malicious repos
+ * are recorded but their links are NOT followed.
+ */
 async function collectUrlScan(): Promise<(string | number)[][]> {
   const rows: (string | number)[][] = [];
-  const known = new Set<string>(discoveredRepos.map((r) => r.full_name.toLowerCase()));
+  const inSource = new Set<string>(discoveredRepos.map((r) => r.full_name.toLowerCase()));
+  const visited = new Set<string>();
 
+  // Queue seeded with the fixed URLs at order 1.
+  let frontier: { fullName: string; via: string }[] = [];
   for (const url of SCAN_URLS) {
     const fullName = parseRepoUrl(url);
-    if (!fullName) {
-      rows.push([url, "", "SKIPPED", "unparseable URL", "", "", "", "", ""]);
-      continue;
-    }
-
-    const repo = await getJson<GitHubRepo>(
-      "https://api.github.com/repos/" + fullName,
-      githubHeaders()
-    );
-
-    if (!repo || !repo.full_name) {
-      rows.push([url, fullName, "SKIPPED", "not found or rate-limited", "", "", "", "", ""]);
-      continue;
-    }
-
-    const verdict = classifyRepo(repo);
-    rows.push([
-      url,
-      repo.full_name,
-      verdict.safe ? "OK" : "MALICIOUS",
-      verdict.safe ? "safe to fetch" : verdict.reason,
-      repo.stargazers_count,
-      repo.language || "",
-      repo.archived ? "yes" : "no",
-      (repo.pushed_at || "").substring(0, 10),
-      truncate(repo.description || "", 300)
-    ]);
-
-    // Feed safe, not-yet-seen repos into the source-download pool.
-    if (verdict.safe && !known.has(repo.full_name.toLowerCase())) {
-      known.add(repo.full_name.toLowerCase());
-      discoveredRepos.push(repo);
+    if (fullName && !visited.has(fullName.toLowerCase())) {
+      visited.add(fullName.toLowerCase());
+      frontier.push({ fullName: fullName, via: "seed" });
+    } else if (!fullName) {
+      rows.push([1, "seed", url, "SKIPPED", "unparseable URL", "", "", "", "", ""]);
     }
   }
 
+  for (let order = 1; order <= SCAN_MAX_ORDER && frontier.length > 0; order++) {
+    const next: { fullName: string; via: string }[] = [];
+
+    for (const item of frontier) {
+      if (visited.size > SCAN_TOTAL_LIMIT) {
+        break;
+      }
+
+      const repo = await getJson<GitHubRepo>(
+        "https://api.github.com/repos/" + item.fullName,
+        githubHeaders()
+      );
+
+      if (!repo || !repo.full_name) {
+        rows.push([order, item.via, item.fullName, "SKIPPED", "not found or rate-limited", "", "", "", "", ""]);
+        continue;
+      }
+
+      const verdict = classifyRepo(repo);
+      rows.push([
+        order,
+        item.via,
+        repo.full_name,
+        verdict.safe ? "OK" : "MALICIOUS",
+        verdict.safe ? "safe to fetch" : verdict.reason,
+        repo.stargazers_count,
+        repo.language || "",
+        repo.archived ? "yes" : "no",
+        (repo.pushed_at || "").substring(0, 10),
+        truncate(repo.description || "", 300)
+      ]);
+
+      if (!verdict.safe) {
+        continue; // never follow links out of a repo flagged malicious
+      }
+
+      if (!inSource.has(repo.full_name.toLowerCase())) {
+        inSource.add(repo.full_name.toLowerCase());
+        discoveredRepos.push(repo);
+      }
+
+      // Expand to the next order (skip when the next order would exceed the max).
+      if (order < SCAN_MAX_ORDER) {
+        const links = await discoverLinkedRepos(repo);
+        let added = 0;
+        for (const linked of links) {
+          const key = linked.toLowerCase();
+          if (visited.has(key) || visited.size > SCAN_TOTAL_LIMIT) {
+            continue;
+          }
+          visited.add(key);
+          next.push({ fullName: linked, via: repo.full_name });
+          added++;
+          if (added >= SCAN_LINKS_PER_REPO) {
+            break;
+          }
+        }
+      }
+    }
+
+    frontier = next;
+  }
+
   return rows;
+}
+
+/** Fetches a repo's README and extracts distinct github.com/owner/repo links (self excluded). */
+async function discoverLinkedRepos(repo: GitHubRepo): Promise<string[]> {
+  const meta = await getJson<GitHubContentEntry>(
+    "https://api.github.com/repos/" + repo.full_name + "/readme",
+    githubHeaders()
+  );
+  if (!meta || !meta.download_url) {
+    return [];
+  }
+
+  const text = await getText(meta.download_url);
+  if (text === null) {
+    return [];
+  }
+
+  const found: string[] = [];
+  const seen = new Set<string>();
+  const self = repo.full_name.toLowerCase();
+  const regex = /github\.com\/([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)/g;
+
+  let match = regex.exec(text);
+  while (match !== null) {
+    const owner = match[1];
+    let name = match[2].replace(/\.git$/i, "");
+    // Drop obvious non-repo owners.
+    if (owner.toLowerCase() !== "sponsors" && owner.toLowerCase() !== "topics" && name) {
+      const full = owner + "/" + name;
+      const key = full.toLowerCase();
+      if (key !== self && !seen.has(key)) {
+        seen.add(key);
+        found.push(full);
+      }
+    }
+    match = regex.exec(text);
+  }
+
+  return found;
 }
 
 /* ----------------------------------------------------------- Source code */
