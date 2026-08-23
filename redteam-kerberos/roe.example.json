@@ -1,0 +1,11 @@
+{
+  "engagement_id": "ENG-2026-KRB",
+  "client": "Acme Corp",
+  "authorized_by": "ciso@acme.example",
+  "scope": ["*.corp.lab", "10.0.0.0/24"],
+  "exclusions": ["dc-prod.corp.lab"],
+  "not_before": "2026-08-01T00:00:00Z",
+  "not_after": "2026-09-30T23:59:59Z",
+  "max_requests_per_target": 600,
+  "requests_per_second": 5.0
+}

@@ -1,0 +1,3 @@
+# Runtime dependency for LIVE modules against a real KDC. The framework's
+# safety layer and self-tests run with the standard library alone.
+impacket>=0.11.0

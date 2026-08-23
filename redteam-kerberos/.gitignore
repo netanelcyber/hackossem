@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+reports/audit-*.jsonl
+reports/report-*.json
+.venv/
