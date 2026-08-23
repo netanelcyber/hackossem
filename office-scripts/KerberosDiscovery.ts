@@ -594,7 +594,7 @@ async function listSourceFiles(repo: GitHubRepo): Promise<GitHubContentEntry[]> 
       size: size,
       download_url:
         "https://raw.githubusercontent.com/" + repo.full_name + "/" +
-        branch + "/" + entry.path.split("/").map(encodeURIComponent).join("/")
+        branch + "/" + entry.path.split("/").map((seg) => encodeURIComponent(seg)).join("/")
     });
     if (picked.length >= SOURCE_FILE_LIMIT) {
       break;
