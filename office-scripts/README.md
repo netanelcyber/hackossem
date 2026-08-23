@@ -8,6 +8,22 @@ It searches GitHub and Reddit for Kerberos-related material and fills three shee
 | GitHub Repos | repo, stars, forks, open issues, language, last push, topics, description, URL |
 | Subreddits | subreddit, subscribers, title, description, URL |
 | Reddit Posts | subreddit, score, comments, date, author, title, URL |
+| Source Code | repo, file path, size, line count, truncated flag, raw URL, file contents |
+
+## Source-code download and the malicious filter
+For the top `SOURCE_REPO_LIMIT` (default 5) most-starred results, the script pulls up to
+`SOURCE_FILE_LIMIT` source files (default 15, max `SOURCE_MAX_BYTES` each) via the git tree API
+and `raw.githubusercontent.com`, and writes their text into the **Source Code** sheet.
+
+A repo is **skipped, not downloaded**, when `classifyRepo()` says it is unsafe:
+* GitHub itself has `disabled` it (abuse / DMCA takedown), or
+* its name, description or topics match `MALICIOUS_MARKERS` (malware, ransomware, stealer,
+  botnet, RAT, keylogger, EDR bypass, live sample, …).
+
+The reason appears in the **Safety** column of the GitHub Repos sheet and in the script console.
+Cells are capped at 32,000 characters — longer files are truncated and flagged in the
+**Truncated** column; the raw URL is always kept so the full file stays reachable.
+Set `FETCH_SOURCE = false` to skip this stage entirely.
 
 ## Setup
 1. Open the workbook in Excel on the web → **Automate → New Script**.
@@ -18,5 +34,5 @@ It searches GitHub and Reddit for Kerberos-related material and fills three shee
 ## Requirements
 External calls need these domains allowed by the tenant admin
 (Microsoft 365 admin center → Settings → Office Scripts → allowed external domains):
-`api.github.com`, `www.reddit.com`.
+`api.github.com`, `raw.githubusercontent.com`, `www.reddit.com`.
 Existing sheets with those names are deleted and rebuilt on each run.
