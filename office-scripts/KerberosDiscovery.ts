@@ -18,6 +18,153 @@
  */
 
 const GITHUB_TOKEN = ""; // optional: "ghp_..." for a higher rate limit
+// Fixed list of repository URLs to scan directly (in addition to the search
+// queries above). Each is fetched, classified for malicious markers, and — when
+// safe — has its source downloaded into the "Source Code" sheet.
+const SCAN_URLS: string[] = [
+  "https://github.com/fortra/impacket",
+  "https://github.com/Hackplayers/evil-winrm",
+  "https://github.com/GhostPack/Rubeus",
+  "https://github.com/ropnop/kerbrute",
+  "https://github.com/odedshimon/BruteShark",
+  "https://github.com/lgandx/PCredz",
+  "https://github.com/lefayjey/linWinPwn",
+  "https://github.com/dromara/MaxKey",
+  "https://github.com/dirkjanm/krbrelayx",
+  "https://github.com/gentilkiwi/kekeo",
+  "https://github.com/jupyter-incubator/sparkmagic",
+  "https://github.com/Qianlitp/WatchAD",
+  "https://github.com/freeipa/freeipa",
+  "https://github.com/NotMedic/NetNTLMtoSilverTicket",
+  "https://github.com/cube0x0/KrbRelay",
+  "https://github.com/dirkjanm/PKINITtools",
+  "https://github.com/realguoshuai/hadoop_study",
+  "https://github.com/OpenIdentityPlatform/OpenAM",
+  "https://github.com/MorDavid/NetworkHound",
+  "https://github.com/trustedsec/Titanis",
+  "https://github.com/jcmturner/gokrb5",
+  "https://github.com/ShutdownRepo/targetedKerberoast",
+  "https://github.com/tothi/rbcd-attack",
+  "https://github.com/CICADA8-Research/RemoteKrbRelay",
+  "https://github.com/drak3hft7/Cheat-Sheet---Active-Directory",
+  "https://github.com/RalfHacker/Kerbeus-BOF",
+  "https://github.com/marcosValle/awesome-windows-red-team",
+  "https://github.com/ADScanPro/adscan",
+  "https://github.com/krb5/krb5",
+  "https://github.com/dotnet/Kerberos.NET",
+  "https://github.com/wh0amitz/KRBUACBypass",
+  "https://github.com/Waffle/waffle",
+  "https://github.com/optiv/Talon",
+  "https://github.com/skelsec/kerberoast",
+  "https://github.com/trustedsec/orpheus",
+  "https://github.com/heimdal/heimdal",
+  "https://github.com/zszszszsz/.config",
+  "https://github.com/capture0x/AdStrike",
+  "https://github.com/stnoonan/spnego-http-auth-nginx-module",
+  "https://github.com/Tw1sm/RITM",
+  "https://github.com/GhostPack/SharpRoast",
+  "https://github.com/TheManticoreProject/manticore-delegations",
+  "https://github.com/tranquilit/OpenRSAT",
+  "https://github.com/HarmJ0y/ASREPRoast",
+  "https://github.com/Luct0r/KerberOPSEC",
+  "https://github.com/curtishoughton/Penetration-Testing-Cheat-Sheet",
+  "https://github.com/oiweiwei/go-msrpc",
+  "https://github.com/salyh/elasticsearch-security-plugin",
+  "https://github.com/emrekybs/AD-AssessmentKit",
+  "https://github.com/Don-No7/Hack-SQL",
+  "https://github.com/aws/credentials-fetcher",
+  "https://github.com/pythongssapi/python-gssapi",
+  "https://github.com/CNTRUN/Termux-command",
+  "https://github.com/jalvarezz13/Krb5RoastParser",
+  "https://github.com/gssapi/mod_auth_gssapi",
+  "https://github.com/NetSPI/AD-PathFinder",
+  "https://github.com/icedracon/adhammer",
+  "https://github.com/salyh/elastic-defender",
+  "https://github.com/Dr4ks/PJPT_CheatSheet",
+  "https://github.com/Lexus89/SharpPack",
+  "https://github.com/JVBotelho/skewrun",
+  "https://github.com/skelsec/PyKerberoast",
+  "https://github.com/jfjallid/kerbtool",
+  "https://github.com/zorn96/ms_active_directory",
+  "https://github.com/jborean93/pyspnego",
+  "https://github.com/latchset/kdcproxy",
+  "https://github.com/msktutil/msktutil",
+  "https://github.com/OneBitSoftware/Microsoft.AspNetCore.Authentication.ActiveDirectory",
+  "https://github.com/gssapi/gssproxy",
+  "https://github.com/NeosIT/active-directory-integration2",
+  "https://github.com/gcavalcante8808/docker-krb5-server",
+  "https://github.com/p0dalirius/GhostSPN",
+  "https://github.com/BabyJ723/blast-ON",
+  "https://github.com/Retrospected/kerbmon",
+  "https://github.com/h4rithd/PrecompiledBinaries",
+  "https://github.com/wolfSSL/osp",
+  "https://github.com/its-a-feature/KeytabParser",
+  "https://github.com/adaltas/node-krb5",
+  "https://github.com/jonaslejon/ad-autopwn",
+  "https://github.com/bringhurst/nginx-mod-auth-kerb",
+  "https://github.com/edseymour/kinit-sidecar",
+  "https://github.com/blacklanternsecurity/Convert-Invoke-Kerberoast",
+  "https://github.com/quasoft/websspi",
+  "https://github.com/garvitv14/snowcorp-lab",
+  "https://github.com/Blumira/Kerberoast-Detection",
+  "https://github.com/slyd0g/SharpRoast-Parser",
+  "https://github.com/dpotapov/go-spnego",
+  "https://github.com/Kili69/TierLevelIsolation",
+  "https://github.com/Get-ADPen/thc-Kerbhuntr",
+  "https://github.com/thehackersbrain/certificate-of-compromise",
+  "https://github.com/froschi/chef-cookbook-libgssapi-krb5",
+  "https://github.com/BetaHydri/RC4-ADAssessment",
+  "https://github.com/latchset/libverto",
+  "https://github.com/kwart/spnego-demo",
+  "https://github.com/ricardojoserf/SSSD-creds",
+  "https://github.com/mr-r3b00t/kerberoast_audit",
+  "https://github.com/jborean93/pykrb5",
+  "https://github.com/Get-ADPen/CrackMapKeros",
+  "https://github.com/vpxuser/centralized-system-pentest-cheat-sheet",
+  "https://github.com/rra/pam-krb5",
+  "https://github.com/whoamins/SPN-Honeypot",
+  "https://github.com/mikma/egssapi",
+  "https://github.com/sleeper/rack-auth-krb",
+  "https://github.com/tresata/akka-http-spnego",
+  "https://github.com/krb5/krb5-anonsvn",
+  "https://github.com/atomic-penguin/cookbook-krb5",
+  "https://github.com/phihos/docker-sssd-krb5-ldap",
+  "https://github.com/codecentric/elasticsearch-shield-kerberos-realm",
+  "https://github.com/froz42/kerbernetes",
+  "https://github.com/BroadbentT/ROGUE-AGENT",
+  "https://github.com/estokes/cross-krb5",
+  "https://github.com/timfel/krb5-auth",
+  "https://github.com/codelibs/spnego",
+  "https://github.com/Get-ADPen/ExchangeBeros",
+  "https://github.com/php/pecl-authentication-krb5",
+  "https://github.com/square/pam_krb5_ccache",
+  "https://github.com/chapeltech/krb5_admin",
+  "https://github.com/EleotleCram/jetty-spnego-demo",
+  "https://github.com/novakov-alexey-zz/http4s-spnego",
+  "https://github.com/PwnDexter/Rubeus-to-Hashcat",
+  "https://github.com/veldrane/krb5proxy",
+  "https://github.com/Gembal77/script-hack",
+  "https://github.com/csandker/spnegoDown",
+  "https://github.com/ypb/ngx_http_auth_sso_module",
+  "https://github.com/cumakurt/adar",
+  "https://github.com/tmenochet/PowerSpray",
+  "https://github.com/theSaarco/krb5-helm",
+  "https://github.com/go-krb5/krb5",
+  "https://github.com/mermehr/ad-reaper",
+  "https://github.com/tresata/spray-spnego",
+  "https://github.com/m4dc4p/rubysspi",
+  "https://github.com/cbev0x/SteadFAST",
+  "https://github.com/montag451/spnego-proxy",
+  "https://github.com/snyk/go-httpauth",
+  "https://github.com/EleotleCram/spnego.sf.net-fork",
+  "https://github.com/plur1bu5/TrustFull",
+  "https://github.com/fclmman/alpine-nginx-spnego",
+  "https://github.com/bodaay/SimpleAuth",
+  "https://github.com/michael-o/tomcatspnegoad",
+  "https://github.com/k4sth4/Kerberos",
+  "https://github.com/bloomberg/Catalyst-Authentication-Credential-GSSAPI"
+];
+
 const QUERIES = ["kerberos", "kerberoasting", "krb5", "spnego", "active directory kerberos"];
 const MAX_ROWS_PER_QUERY = 30;
 
@@ -145,6 +292,14 @@ async function main(workbook: ExcelScript.Workbook): Promise<void> {
     "Reddit Posts",
     ["Query", "Subreddit", "Score", "Comments", "Posted (UTC)", "Author", "Title", "URL"],
     posts
+  );
+
+  const scan = await collectUrlScan();
+  writeTable(
+    workbook,
+    "URL Scan",
+    ["URL", "Repository", "Safety", "Reason", "Stars", "Language", "Archived", "Last push", "Description"],
+    scan
   );
 
   if (FETCH_SOURCE) {
@@ -279,6 +434,70 @@ async function collectPosts(): Promise<(string | number)[][]> {
   }
 
   rows.sort((a, b) => (b[2] as number) - (a[2] as number));
+  return rows;
+}
+
+/* -------------------------------------------------------------- URL scan */
+
+/** Parses "https://github.com/owner/repo(...)" into "owner/repo". */
+function parseRepoUrl(url: string): string | null {
+  const match = url.match(/github\.com\/([^\/#?]+)\/([^\/#?]+)/i);
+  if (!match) {
+    return null;
+  }
+  const owner = match[1];
+  const repo = match[2].replace(/\.git$/i, "");
+  if (!owner || !repo) {
+    return null;
+  }
+  return owner + "/" + repo;
+}
+
+/**
+ * Fetches each SCAN_URLS repo, classifies it, and — when safe — adds it to the
+ * pool that collectSource() downloads from. Returns rows for the "URL Scan" sheet.
+ */
+async function collectUrlScan(): Promise<(string | number)[][]> {
+  const rows: (string | number)[][] = [];
+  const known = new Set<string>(discoveredRepos.map((r) => r.full_name.toLowerCase()));
+
+  for (const url of SCAN_URLS) {
+    const fullName = parseRepoUrl(url);
+    if (!fullName) {
+      rows.push([url, "", "SKIPPED", "unparseable URL", "", "", "", "", ""]);
+      continue;
+    }
+
+    const repo = await getJson<GitHubRepo>(
+      "https://api.github.com/repos/" + fullName,
+      githubHeaders()
+    );
+
+    if (!repo || !repo.full_name) {
+      rows.push([url, fullName, "SKIPPED", "not found or rate-limited", "", "", "", "", ""]);
+      continue;
+    }
+
+    const verdict = classifyRepo(repo);
+    rows.push([
+      url,
+      repo.full_name,
+      verdict.safe ? "OK" : "MALICIOUS",
+      verdict.safe ? "safe to fetch" : verdict.reason,
+      repo.stargazers_count,
+      repo.language || "",
+      repo.archived ? "yes" : "no",
+      (repo.pushed_at || "").substring(0, 10),
+      truncate(repo.description || "", 300)
+    ]);
+
+    // Feed safe, not-yet-seen repos into the source-download pool.
+    if (verdict.safe && !known.has(repo.full_name.toLowerCase())) {
+      known.add(repo.full_name.toLowerCase());
+      discoveredRepos.push(repo);
+    }
+  }
+
   return rows;
 }
 

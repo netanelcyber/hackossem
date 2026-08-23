@@ -9,6 +9,14 @@ It searches GitHub and Reddit for Kerberos-related material and fills three shee
 | Subreddits | subreddit, subscribers, title, description, URL |
 | Reddit Posts | subreddit, score, comments, date, author, title, URL |
 | Source Code | repo, file path, size, line count, truncated flag, raw URL, file contents |
+| URL Scan | each scanned URL, resolved repo, OK/MALICIOUS verdict, reason, stars, language, archived, last push, description |
+
+## Scanning a fixed list of URLs
+`SCAN_URLS` (top of the script) holds ~140 curated Kerberos/AD repo URLs. Each is fetched
+via the GitHub API, run through the same `classifyRepo()` malicious filter, and listed on the
+**URL Scan** sheet with an `OK` / `MALICIOUS` verdict. Safe repos from this list are added to the
+source-download pool, so they can appear in the **Source Code** sheet too. Add or remove URLs
+freely; unparseable, missing, or rate-limited entries are marked `SKIPPED`.
 
 ## Source-code download and the malicious filter
 For the top `SOURCE_REPO_LIMIT` (default 5) most-starred results, the script pulls up to
