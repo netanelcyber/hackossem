@@ -17,7 +17,9 @@
  *     Do not commit a real token into a shared workbook.
  */
 
-const GITHUB_TOKEN = ""; // optional: "ghp_..." for a higher rate limit
+// Optional GitHub token for a higher rate limit (5,000/hr vs ~60/hr).
+// Paste your token at run time only — do NOT commit a real token to this repo.
+const GITHUB_TOKEN = "YOUR_GITHUB_TOKEN_HERE"; // e.g. a fine-grained, read-only, public-repos token
 // Fixed list of repository URLs to scan directly (in addition to the search
 // queries above). Each is fetched, classified for malicious markers, and — when
 // safe — has its source downloaded into the "Source Code" sheet.
@@ -641,7 +643,7 @@ function githubHeaders(): { [key: string]: string } {
     "Accept": "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28"
   };
-  if (GITHUB_TOKEN) {
+  if (GITHUB_TOKEN && GITHUB_TOKEN !== "YOUR_GITHUB_TOKEN_HERE") {
     headers["Authorization"] = "Bearer " + GITHUB_TOKEN;
   }
   return headers;
